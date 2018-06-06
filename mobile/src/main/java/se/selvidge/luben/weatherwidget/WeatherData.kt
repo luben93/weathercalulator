@@ -8,6 +8,7 @@ data class WeatherData(
         var windDirection: Int,
         var raining:Boolean,
         var place: Address?
-
+//todo move to pretty string here
+//todo add human clothing model (values at when what clothes are suitable)
 )
 

@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class MyService : Service() {
+    //todo add alarm manager to update weather
+    //todo listen after intents and react aproriatly, widget button etc
 
     val mBinder = LocalBinder()
     //place lat,long
