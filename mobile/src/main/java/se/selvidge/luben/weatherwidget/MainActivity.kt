@@ -16,6 +16,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 class MainActivity : AppCompatActivity() {
     public val YOUR_AWESOME_ACTION = "YourAwesomeAction"
     var TAG = "MWIDGET"
+    //TODO add options to select places for weather
      var myService:MyService? = null
     var myServiceConnecetion = object: ServiceConnection {
          override fun onServiceDisconnected(p0: ComponentName?) {
