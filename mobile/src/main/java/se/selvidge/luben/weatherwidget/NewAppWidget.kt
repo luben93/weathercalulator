@@ -60,13 +60,13 @@ class NewAppWidget : AppWidgetProvider() {
 //    companion object {
 //        public var TAG = "CWIDGET"
 
-        private var counter:Int = 0
+//        private var counter:Int = 0
 
         internal fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
                                      appWidgetId: Int) {
-            counter++
+//            counter++
 
-            val widgetText = counter.toString() + MyService.getWeatherModel()
+            val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
 //            val widgetText = counter.toString() + data
             // Construct the RemoteViews object
             val views = RemoteViews(context.packageName, R.layout.new_app_widget)

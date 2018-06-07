@@ -19,6 +19,7 @@ import java.util.*
 class MyService : Service() {
     //todo add alarm manager to update weather
     //todo listen after intents and react aproriatly, widget button etc
+    //maybe use Machine learning to train weather -> clothes model
 
     val mBinder = LocalBinder()
     //place lat,long
