@@ -65,8 +65,7 @@ class MyService : Service() {
 
 
                     //widget view
-                    val appWidgetManager = AppWidgetManager.getInstance(this
-                            .applicationContext)
+
 
 //            val allWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
 //            for (widgetId in allWidgetIds){
@@ -74,11 +73,6 @@ class MyService : Service() {
 //                            .applicationContext.packageName,
 //                            R.layout.new_app_widget)
 //                remoteViews
-                    val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
-                    val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
-                    views.setTextViewText(R.id.appwidget_text, widgetText)
-                    val thisWidget = ComponentName(this, NewAppWidget::class.java)
-                    appWidgetManager.updateAppWidget(thisWidget, views)
 
 //                    activityIntent.action = MainActivity::YOUR_AWESOME_ACTION.toString()
 //                sendBroadcast(activityIntent)
@@ -170,7 +164,8 @@ class MyService : Service() {
 //                            var windSpeed = (datarow.get(14) as JSONObject).getJSONArray("values")[0] as Int
 //                            var windDirection = (datarow.get(13) as JSONObject).getJSONArray("values")[0] as Int
                             Log.d(TAG,data)
-                            LocalBroadcastManager.getInstance(context).sendBroadcast(activityIntent)
+                           updateViews()
+
 
                         }
                     }
@@ -183,6 +178,17 @@ class MyService : Service() {
 
             }
         })
+    }
+
+    internal fun updateViews(){
+        val appWidgetManager = AppWidgetManager.getInstance(this
+                .applicationContext)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
+        val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n $data"
+        val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
+        views.setTextViewText(R.id.appwidget_text, widgetText)
+        val thisWidget = ComponentName(this, NewAppWidget::class.java)
+        appWidgetManager.updateAppWidget(thisWidget, views)
     }
 
 

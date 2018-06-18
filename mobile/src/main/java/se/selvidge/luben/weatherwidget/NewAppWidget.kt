@@ -62,15 +62,15 @@ class NewAppWidget : AppWidgetProvider() {
 
 //        private var counter:Int = 0
 
-        internal fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
+         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
                                      appWidgetId: Int) {
 //            counter++
 
-            val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
+//            val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
 //            val widgetText = counter.toString() + data
             // Construct the RemoteViews object
             val views = RemoteViews(context.packageName, R.layout.new_app_widget)
-            views.setTextViewText(R.id.appwidget_text, widgetText)
+//            views.setTextViewText(R.id.appwidget_text, widgetText)
 
 
 //            val intent = Intent(context, MyService::class.java)//todo send intent to service
