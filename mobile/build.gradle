@@ -34,4 +34,5 @@ dependencies {
     wearApp project(':wear')
     implementation 'com.google.android.gms:play-services-wearable:+'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation "org.jetbrains.anko:anko:0.10.5"
 }

@@ -17,7 +17,6 @@
         android:text="@string/appwidget_text"
         android:textColor="#ffffff"
         android:textSize="10sp"
-        <!--add styling, maybe fontawesome icons -->
         android:textStyle="bold|italic"
         />
 

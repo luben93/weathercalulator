@@ -12,9 +12,13 @@ import android.view.Menu
 import android.view.MenuItem
 
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.content_main.*
 
 class MainActivity : AppCompatActivity() {
-    public val YOUR_AWESOME_ACTION = "YourAwesomeAction"
+    companion object {
+        val YOUR_AWESOME_ACTION = "YourAwesomeAction"
+    }
+//    public final
     var TAG = "MWIDGET"
     //TODO add options to select places for weather
      var myService:MyService? = null
@@ -60,7 +64,7 @@ class MainActivity : AppCompatActivity() {
 
     val broadCastReceiver = object : BroadcastReceiver() {
         override fun onReceive(contxt: Context?, intent: Intent?) {
-
+        Log.d(TAG,"did recive")
             when (intent?.action) {
                 YOUR_AWESOME_ACTION -> haha()
                 "haha" -> haha()
@@ -71,6 +75,7 @@ class MainActivity : AppCompatActivity() {
 
     fun haha(){
         Log.d(TAG,"haha haha")
+        mainTextView.text = myService?.data
     }
     override fun onResume() {
         super.onResume()
