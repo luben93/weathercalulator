@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.support.annotation.RequiresApi
 import android.support.v4.content.LocalBroadcastManager
+import android.text.format.Time
 import android.util.Log
 import android.widget.RemoteViews
 import okhttp3.*
@@ -20,6 +21,8 @@ import java.io.IOException
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 
 class MyService : Service() {
     //todo add alarm manager to update weather
@@ -33,6 +36,8 @@ class MyService : Service() {
     //bandhagen 59.267410, 18.059313  1
     //v'sterled 59.328446, 17.970361  2
     var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
+//    var weatherTimes = listOf(Triple(Date(),Address(Locale.ENGLISH),WeatherData(0.0,Wind(0,0.0),false, Address(Locale.ENGLISH))))
+    var weatherTimes: Map<Date,Map<Address,WeatherData>> = HashMap()
     val TAG = "SWIDGET"
 
 //    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
@@ -52,7 +57,7 @@ class MyService : Service() {
 
     fun doUpdate() {
         try {
-            data = ""
+//            data = ""
             locations.forEach { loc -> getJson(loc.first, loc.second, Date()) }
 //            getJson(locations[0].first, locations[0].second, Date())
 
@@ -99,7 +104,14 @@ class MyService : Service() {
         var widget:NewAppWidget? = null
 //        var data = "not updated yet"
     }
-        var data = ""
+        fun data() :String{
+            var out="${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} "
+//            val accessor = Calendar.getInstance().time.hours - if(Calendar.getInstance().time.minutes < 24){ -1}else{0}
+             weatherTimes[Date()]?.forEach { address, realWeatherData ->  out += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
+                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"}
+            return out
+        }
+   
     var client = OkHttpClient()
 
 
@@ -137,7 +149,8 @@ class MyService : Service() {
 //                        Log.d(NewAppWidget.TAG, "${SimpleDateFormat(format).format(time)}")
                         val rowtime = SimpleDateFormat(format).parse(keyval.getString("validTime"))
 //                        Log.d(NewAppWidget.TAG, "${rowtime}")
-                        if (Math.abs(time.time - rowtime.time) < 1800000) {
+//                        if (Math.abs(time.time - rowtime.time) < 1800000) {
+
                                                     Log.d(TAG, "${rowtime}")
                             val datarow = keyval.getJSONArray("parameters")
 //                            Log.d(TAG, datarow.toString())
@@ -156,25 +169,36 @@ class MyService : Service() {
                             }
 
                         var geo = Geocoder(this@MyService)
-                            weatherData?.place = geo.getFromLocation(lat,long,1).first()
+                           val place =   geo.getFromLocation(lat,long,1).first()
+                        weatherData.place = place
                         Log.d(TAG,weatherData.toString())
                             val realWeatherData = weatherData
-                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
-                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
-//                            var temp = (datarow.get(11) as JSONObject).getJSONArray("values")[0] as Double
+//                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
+//                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
+
+//                        weatherTimes[rowtime]?.get(place) = realWeatherData
+                        var map = weatherTimes[rowtime]
+                        if (map != null) {
+                            map[place] = realWeatherData
+                        } else{
+                            map = HashMap()
+                        }
+                        //                            var temp = (datarow.get(11) as JSONObject).getJSONArray("values")[0] as Double
 //                            var windSpeed = (datarow.get(14) as JSONObject).getJSONArray("values")[0] as Int
 //                            var windDirection = (datarow.get(13) as JSONObject).getJSONArray("values")[0] as Int
-                            Log.d(TAG,data)
-                           updateViews()
+//                            Log.d(TAG,data)
 
 
-                        }
+
+//                        }
                     }
                 } catch (pe: ParseException) {
                     pe.printStackTrace()
                 } catch (e: Exception ){
                     e.printStackTrace()
                 }
+
+    updateViews()
 //                    arr.forEach { rows:JSONObject -> {if(rows)}}
 
             }
@@ -185,13 +209,17 @@ class MyService : Service() {
         val appWidgetManager = AppWidgetManager.getInstance(this
                 .applicationContext)
         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
-        val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n $data"
+        val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${data()}"
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         views.setTextViewText(R.id.appwidget_text, widgetText)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
         appWidgetManager.updateAppWidget(thisWidget, views)
     }
 
+
+}
+
+private operator fun <K, V> Map<K, V>.set(place: K, value: V) {
 
 }
 

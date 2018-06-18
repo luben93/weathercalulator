@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
 
     fun haha(){
         Log.d(TAG,"haha haha")
-        mainTextView.text = myService?.data
+        mainTextView.text = myService?.data()
     }
     override fun onResume() {
         super.onResume()
