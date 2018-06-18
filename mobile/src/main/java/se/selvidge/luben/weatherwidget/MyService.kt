@@ -142,13 +142,14 @@ class MyService : Service() {
                             val datarow = keyval.getJSONArray("parameters")
 //                            Log.d(TAG, datarow.toString())
 
-                            var weatherData= WeatherData(0.0,0.0,0,false,null)
+                            var weatherData= WeatherData(0.0,Wind(0,0.0),false,null)
+
                             for(row in datarow){
                                 Log.d(TAG,row.getString("name").toString())
                                 when (row.getString("name")){
                                     "t" -> weatherData?.temp = row.getJSONArray("values")[0] as Double //temp
-                                    "wd" -> weatherData?.windDirection = row.getJSONArray("values")[0] as Int//wind dir
-                                    "ws" -> weatherData?.windSpeed = row.getJSONArray("values")[0] as Double//windspeed
+                                    "wd" -> weatherData?.wind.direction = row.getJSONArray("values")[0] as Int//wind dir
+                                    "ws" -> weatherData.wind.speed = row.getJSONArray("values")[0] as Double//windspeed
                                     "pcat" -> weatherData?.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
                                     else -> Log.d(TAG,row.toString())
                                 }
@@ -158,8 +159,8 @@ class MyService : Service() {
                             weatherData?.place = geo.getFromLocation(lat,long,1).first()
                         Log.d(TAG,weatherData.toString())
                             val realWeatherData = weatherData
-                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ W:${realWeatherData.windSpeed}m/s ${realWeatherData.windDirection} " +
-                                    "${if(realWeatherData.raining) "raining" else "no rain"}\n"
+                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
+                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
 //                            var temp = (datarow.get(11) as JSONObject).getJSONArray("values")[0] as Double
 //                            var windSpeed = (datarow.get(14) as JSONObject).getJSONArray("values")[0] as Int
 //                            var windDirection = (datarow.get(13) as JSONObject).getJSONArray("values")[0] as Int
