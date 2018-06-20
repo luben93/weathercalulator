@@ -4,7 +4,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
+import android.arch.persistence.room.Room
 import android.content.*
+import android.database.sqlite.SQLiteConstraintException
 import android.location.Geocoder
 import android.os.Binder
 import android.os.IBinder
@@ -12,18 +14,18 @@ import android.os.SystemClock
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
-import io.realm.Realm
-import io.realm.RealmConfiguration
-import io.realm.kotlin.where
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
 import org.json.JSONArray
 import org.json.JSONObject
+import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.WeatherData
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
+
+
 
 
 
@@ -49,13 +51,13 @@ class MyService : Service() {
 
     val activityIntent = Intent(MainActivity.YOUR_AWESOME_ACTION)
     val mBinder = LocalBinder()
+    lateinit var db:AppDatabase
     //place lat,long
     //home 59.179741,18.127764        0
     //bandhagen 59.267410, 18.059313  1
     //v'sterled 59.328446, 17.970361  2
     var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
     val TAG = "SWIDGET"
-    lateinit var realm:Realm
 //    var weatherData:
 //    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
 
@@ -67,13 +69,14 @@ class MyService : Service() {
     override fun onCreate() {
         super.onCreate()
         val context = this
-        Realm.init(context)
+//        Realm.init(context)
+        db =  Room.databaseBuilder(this, AppDatabase::class.java, "database-name").build()
 
-        val config =  RealmConfiguration.Builder()
-                .deleteRealmIfMigrationNeeded()
-                .build()
-        Realm.setDefaultConfiguration(config)
-        realm = Realm.getDefaultInstance()
+//        val config =  RealmConfiguration.Builder()
+//                .deleteRealmIfMigrationNeeded()
+//                .build()
+//        Realm.setDefaultConfiguration(config)
+//        realm = Realm.getDefaultInstance()
 
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, MyService::class.java)
@@ -81,7 +84,7 @@ class MyService : Service() {
 
         alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)
+                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
         LocalBroadcastManager.getInstance(this).registerReceiver(br(), IntentFilter(syncAction))
         this.registerReceiver(object : BroadcastReceiver(){
             override fun onReceive(p0: Context?, p1: Intent?) {
@@ -151,7 +154,7 @@ class MyService : Service() {
                 Log.d(TAG, out)
                 val json = JSONObject(out)
 
-        val asyncRealm = Realm.getDefaultInstance()
+//        val asyncRealm = Realm.getDefaultInstance()
                 try {
                     val format = "yyyy-MM-dd'T'HH:mm:ss'Z'"
                     val lastRowTime = Date()
@@ -167,30 +170,48 @@ class MyService : Service() {
 //                            Log.d(TAG, datarow.toString())
                             var geo = Geocoder(this@MyService)
 //                            weatherData?.place =
-                            var weatherData= WeatherData()
-                            weatherData.place= geo.getFromLocation(lat, long, 1).first()
-                        weatherData.time =rowtime
-                            for(row in datarow){
-                                Log.d(TAG,row.getString("name").toString())
-                                when (row.getString("name")){
+                            var weatherData = WeatherData()
+                            weatherData.lat = lat
+                            weatherData.lon = long
+                            weatherData.time = rowtime.time
+                            for (row in datarow) {
+                                Log.d(TAG, row.getString("name").toString())
+                                when (row.getString("name")) {
                                     "t" -> weatherData.temp = row.getJSONArray("values")[0] as Double //temp
-                                    "wd" -> weatherData.wind?.direction = row.getJSONArray("values")[0] as Int//wind dir
-                                    "ws" -> weatherData.wind?.speed = row.getJSONArray("values")[0] as Double//windspeed
+                                    "wd" -> weatherData.windDirection = row.getJSONArray("values")[0] as Int//wind dir
+                                    "ws" -> weatherData.windSpeed = row.getJSONArray("values")[0] as Double//windspeed
                                     "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
-                                    else -> Log.d(TAG,row.toString())
+                                    else -> Log.d(TAG, row.toString())
                                 }
                             }
 
 
                         Log.d(TAG,weatherData.toString())
                             val realWeatherData = weatherData
+//                            data += realWeatherData
+                        try {
+                            Log.d(TAG,"inserting $realWeatherData")
+
+                            db.weatherDao().insertAll(realWeatherData)
+                            Log.d(TAG,"did inserting ")
+
+                        }catch (e:SQLiteConstraintException ){
+                            Log.d(TAG,"sqlite constraint do update ")
+
+                            db.weatherDao().updateAll(realWeatherData)
+                        }catch (e: Exception){
+                            Log.d(TAG,"other execption $e \n do update ")
+
+                            db.weatherDao().updateAll(realWeatherData)
+                        }
 
 //                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
 //                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
                             Log.d(TAG,"inserting $realWeatherData")
-                        asyncRealm.beginTransaction()
-                        asyncRealm.insertOrUpdate(realWeatherData)
-                        asyncRealm.commitTransaction()
+//                        asyncRealm.beginTransaction()
+//                        asyncRealm.insertOrUpdate(realWeatherData.wind)
+//                        asyncRealm.insertOrUpdate(realWeatherData)
+//                        asyncRealm.commitTransaction()
 
 //                        }
                     }
@@ -202,20 +223,25 @@ class MyService : Service() {
     }
 
     internal fun updateViews(){
-        val aRealm = Realm.getDefaultInstance()
-        Log.d(TAG,"gonna updateView from service, db size${aRealm.where<WeatherData>().count()} first key ${aRealm.where<WeatherData>().findFirst()} cur date${Date().time}")
+//        val aRealm = Realm.getDefaultInstance()
+//        Log.d(TAG,"gonna updateView from service, db size${aRealm.where<WeatherData>().count()} first key ${aRealm.where<WeatherData>().findFirst()} cur date${Date().time}")
 
         data = ""
+        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time).getPrettyToString (this)}
+//        data += "\n"
+//        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
+
+
         //todo does not find any
-        aRealm.where<WeatherData>().between("time",Date(Date().time-halfHourInMs),Date(Date().time+halfHourInMs) ).
-                findAll().forEach {
-            Log.d(TAG,"${it.wind}")//todo does not fetch rain linked object
-            data += it.getPrettyToString(this) }
+//        aRealm.where<WeatherData>().between("time",Date(Date().time-halfHourInMs),Date(Date().time+halfHourInMs) ).
+//                findAll().forEach {
+//            Log.d(TAG,"${it.wind}")//todo does not fetch rain linked object
+//            data += it.getPrettyToString(this) }
 
         val appWidgetManager = AppWidgetManager.getInstance(this
                 .applicationContext)
         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
-        val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n $data"
+        val widgetText = data
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         views.setTextViewText(R.id.appwidget_text, widgetText)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)

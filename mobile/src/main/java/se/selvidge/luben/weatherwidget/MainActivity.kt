@@ -10,13 +10,9 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import io.realm.Realm
-import io.realm.kotlin.where
-
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import se.selvidge.luben.weatherwidget.MyService.Companion.halfHourInMs
-import se.selvidge.luben.weatherwidget.models.WeatherData
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -85,14 +81,14 @@ class MainActivity : AppCompatActivity() {
     fun UpdateView() {
         try {
             Log.d(TAG,"startign view update")
-            var aRealm = Realm.getDefaultInstance()
+//            var aRealm = Realm.getDefaultInstance()
 
             var data = ""
-            aRealm.where<WeatherData>().between("time", Date(Date().time - halfHourInMs), Date(Date().time + halfHourInMs)).findAll().forEach {
-                Log.d(TAG, "looping Weathers $it")
+//            aRealm.where<WeatherData>().between("time", Date(Date().time - halfHourInMs), Date(Date().time + halfHourInMs)).findAll().forEach {
+//                Log.d(TAG, "looping Weathers $it")
 
-                data += it.getPrettyToString(this)
-            }
+//                data += it.getPrettyToString(this)
+//            }
             mainTextView.text = data
             Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + se.selvidge.luben.weatherwidget.MyService.Companion.halfHourInMs)}")
         }catch (e: Exception){
