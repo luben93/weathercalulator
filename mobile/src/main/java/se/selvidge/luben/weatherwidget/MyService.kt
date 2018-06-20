@@ -1,32 +1,53 @@
 package se.selvidge.luben.weatherwidget
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.content.Intent
-import android.location.Address
+import android.content.*
 import android.location.Geocoder
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
-import android.support.annotation.RequiresApi
+import android.os.SystemClock
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
-import okhttp3.*
+import io.realm.Realm
+import io.realm.RealmConfiguration
+import io.realm.kotlin.where
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jetbrains.anko.doAsync
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
+import se.selvidge.luben.weatherwidget.models.WeatherData
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
+
+
+
 
 class MyService : Service() {
     //todo add alarm manager to update weather
     //todo listen after intents and react aproriatly, widget button etc
     //maybe use Machine learning to train weather -> clothes model
-    val activityIntent = Intent(MainActivity.YOUR_AWESOME_ACTION)
 
+    companion object {
+        fun getWeatherModel(): String {
+//            return data
+            return "handen 21 c\n" +
+                    "östberga 20 c\n" +
+                    "bromma 25 c"
+        }
+        var widget:NewAppWidget? = null
+        val syncAction="syncAction"
+        val halfHourInMs = 1800000;
+
+//        var data = "not updated yet"
+    }
+
+    val activityIntent = Intent(MainActivity.YOUR_AWESOME_ACTION)
     val mBinder = LocalBinder()
     //place lat,long
     //home 59.179741,18.127764        0
@@ -34,12 +55,51 @@ class MyService : Service() {
     //v'sterled 59.328446, 17.970361  2
     var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
     val TAG = "SWIDGET"
-
+    lateinit var realm:Realm
+//    var weatherData:
 //    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
 
     override fun onBind(intent: Intent): IBinder {
 //        TODO("Return the communication channel to the service.")
         return mBinder
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        val context = this
+        Realm.init(context)
+
+        val config =  RealmConfiguration.Builder()
+                .deleteRealmIfMigrationNeeded()
+                .build()
+        Realm.setDefaultConfiguration(config)
+        realm = Realm.getDefaultInstance()
+
+        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, MyService::class.java)
+        var alarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0)
+
+        alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,
+                AlarmManager.INTERVAL_HOUR, alarmIntent)
+        LocalBroadcastManager.getInstance(this).registerReceiver(br(), IntentFilter(syncAction))
+        this.registerReceiver(object : BroadcastReceiver(){
+            override fun onReceive(p0: Context?, p1: Intent?) {
+               onCreate()
+            }
+        },IntentFilter(Intent.ACTION_BOOT_COMPLETED))
+
+
+// Get a Realm instance for this thread
+
+
+    }
+
+    inner class br : BroadcastReceiver() {
+        override fun onReceive(p0: Context?, p1: Intent?) {
+            Log.d(TAG,"brodcast $p0, $p1")
+            doUpdate()
+        }
     }
 
     inner class LocalBinder : Binder() {
@@ -51,55 +111,31 @@ class MyService : Service() {
     }
 
     fun doUpdate() {
-        try {
-            data = ""
-            locations.forEach { loc -> getJson(loc.first, loc.second, Date()) }
+//        Log.d(TAG, "pre drop old${realm.where<WeatherData>().count()}")
+//        realm.beginTransaction()
+//        realm.where<WeatherData>().lessThan("time",Date()).findAll().forEach(WeatherData::deleteFromRealm)
+//        realm.commitTransaction()
+//        Log.d(TAG, "post drop old${realm.where<WeatherData>().count()}")
+
+
+                doAsync {
+            try {
+                data = ""
+                locations.forEach { loc -> getJson(loc.first, loc.second, Date()) }
 //            getJson(locations[0].first, locations[0].second, Date())
+                updateViews()
+//todo empty old data
 
-
-//            fun doUpdate() {
-//                try {
-//                    data = ""
-//                    locations.forEach { loc -> getJson(loc.first, loc.second, Date()) }
-////            getJson(locations[0].first, locations[0].second, Date())
-
-
-                    //widget view
-
-
-//            val allWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-//            for (widgetId in allWidgetIds){
-//                    val remoteViews = RemoteViews(this
-//                            .applicationContext.packageName,
-//                            R.layout.new_app_widget)
-//                remoteViews
-
-//                    activityIntent.action = MainActivity::YOUR_AWESOME_ACTION.toString()
-//                sendBroadcast(activityIntent)
-//            startActivity(activityIntent)// todo always starts activity, never recives
-//           }
-//                } catch (e: Exception) {
-//                    e.printStackTrace()
-//                }
-//            }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 //        return data
+        }
     }
 
-    companion object {
-        fun getWeatherModel(): String {
-//            return data
-            return "handen 21 c\n" +
-                    "östberga 20 c\n" +
-                    "bromma 25 c"
-        }
-        var widget:NewAppWidget? = null
-//        var data = "not updated yet"
-    }
-        var data = ""
+
+
+    var data = ""
     var client = OkHttpClient()
 
 
@@ -110,78 +146,72 @@ class MyService : Service() {
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${long}/lat/${lat}/data.json")
                 .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-                Log.w(TAG, "http failed", e)
-            }
-
-//            @RequiresApi(Build.VERSION_CODES.O)
-            override fun onResponse(call: Call, response: Response) {
+              val response= client.newCall(request).execute()
                 val out = response.body()?.string()
                 Log.d(TAG, out)
                 val json = JSONObject(out)
 
-
+        val asyncRealm = Realm.getDefaultInstance()
                 try {
                     val format = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-
-//                    var Jarray = json.getJSONArray("timeSeries")
+                    val lastRowTime = Date()
                     for(keyval in json.getJSONArray("timeSeries")){
-//                    for (i in 0 until Jarray.length()) {
-//                        val keyval = Jarray.getJSONObject(i)
-//                        keyval.getString("validTime")
-//                        var now = LocalDate.now()
-//                        if(Math.abs(time.time-
-//                        Log.d(NewAppWidget.TAG, "looping $i")
-//                        Log.d(NewAppWidget.TAG, "${SimpleDateFormat(format).format(time)}")
                         val rowtime = SimpleDateFormat(format).parse(keyval.getString("validTime"))
+                        if(rowtime.time-lastRowTime.time>halfHourInMs+halfHourInMs){
+                            return
+                        }
 //                        Log.d(NewAppWidget.TAG, "${rowtime}")
-                        if (Math.abs(time.time - rowtime.time) < 1800000) {
-                                                    Log.d(TAG, "${rowtime}")
+//                        if (Math.abs(time.time - rowtime.time) < 1800000) {
+//                                                    Log.d(TAG, "${rowtime}")
                             val datarow = keyval.getJSONArray("parameters")
 //                            Log.d(TAG, datarow.toString())
-
-                            var weatherData= WeatherData(0.0,Wind(0,0.0),false,null)
-
+                            var geo = Geocoder(this@MyService)
+//                            weatherData?.place =
+                            var weatherData= WeatherData()
+                            weatherData.place= geo.getFromLocation(lat, long, 1).first()
+                        weatherData.time =rowtime
                             for(row in datarow){
                                 Log.d(TAG,row.getString("name").toString())
                                 when (row.getString("name")){
-                                    "t" -> weatherData?.temp = row.getJSONArray("values")[0] as Double //temp
-                                    "wd" -> weatherData?.wind.direction = row.getJSONArray("values")[0] as Int//wind dir
-                                    "ws" -> weatherData.wind.speed = row.getJSONArray("values")[0] as Double//windspeed
-                                    "pcat" -> weatherData?.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
+                                    "t" -> weatherData.temp = row.getJSONArray("values")[0] as Double //temp
+                                    "wd" -> weatherData.wind?.direction = row.getJSONArray("values")[0] as Int//wind dir
+                                    "ws" -> weatherData.wind?.speed = row.getJSONArray("values")[0] as Double//windspeed
+                                    "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
                                     else -> Log.d(TAG,row.toString())
                                 }
                             }
 
-                        var geo = Geocoder(this@MyService)
-                            weatherData?.place = geo.getFromLocation(lat,long,1).first()
+
                         Log.d(TAG,weatherData.toString())
                             val realWeatherData = weatherData
-                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
-                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
-//                            var temp = (datarow.get(11) as JSONObject).getJSONArray("values")[0] as Double
-//                            var windSpeed = (datarow.get(14) as JSONObject).getJSONArray("values")[0] as Int
-//                            var windDirection = (datarow.get(13) as JSONObject).getJSONArray("values")[0] as Int
-                            Log.d(TAG,data)
-                           updateViews()
 
+//                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
+//                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
+                            Log.d(TAG,"inserting $realWeatherData")
+                        asyncRealm.beginTransaction()
+                        asyncRealm.insertOrUpdate(realWeatherData)
+                        asyncRealm.commitTransaction()
 
-                        }
+//                        }
                     }
                 } catch (pe: ParseException) {
                     pe.printStackTrace()
                 } catch (e: Exception ){
                     e.printStackTrace()
                 }
-//                    arr.forEach { rows:JSONObject -> {if(rows)}}
-
-            }
-        })
     }
 
     internal fun updateViews(){
+        val aRealm = Realm.getDefaultInstance()
+        Log.d(TAG,"gonna updateView from service, db size${aRealm.where<WeatherData>().count()} first key ${aRealm.where<WeatherData>().findFirst()} cur date${Date().time}")
+
+        data = ""
+        //todo does not find any
+        aRealm.where<WeatherData>().between("time",Date(Date().time-halfHourInMs),Date(Date().time+halfHourInMs) ).
+                findAll().forEach {
+            Log.d(TAG,"${it.wind}")//todo does not fetch rain linked object
+            data += it.getPrettyToString(this) }
+
         val appWidgetManager = AppWidgetManager.getInstance(this
                 .applicationContext)
         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
