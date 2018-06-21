@@ -12,7 +12,7 @@ import android.widget.RemoteViews
  * Implementation of App Widget functionality.
  */
 class NewAppWidget : AppWidgetProvider() {
-    public var TAG = "WWIDGET"
+    public var TAG = "WIDGET"
     var data = "not fetched yet"
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         // There may be multiple widgets active, so update all of them

@@ -96,7 +96,7 @@ class MyService : Service() {
 
         alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HALF_HOUR,
+                SystemClock.elapsedRealtime() +100,
                 AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)//todo verify that this runs
 
         LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
