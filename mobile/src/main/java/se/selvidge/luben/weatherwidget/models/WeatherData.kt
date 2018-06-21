@@ -8,24 +8,20 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-
-
-
-
 @Entity(primaryKeys = ["lon","lat","time"])
 open class WeatherData{
 
     var temp=0.0
-//        var wind:Wind? = null
-    var raining=false
-        var lat=0.0
-        var lon=0.0
+    var rain=0.0
+
+    var lat=0.0
+    var lon=0.0
     var windSpeed=0.0
     var windDirection=0
-
     val wind:String
         get() = "W: $windSpeed m/s ${dir.values()[((windDirection)/45)]} "
 
+    var time=0L
 
 
 //    @Ignore
@@ -49,18 +45,17 @@ open class WeatherData{
 //             lon= value.longitude
 //            lat = value.latitude
 //        }
-    var time=0L
 
     //todo add human clothing model (values at when what clothes are suitable)
 //    var place:Address
 //    get() {return Address()
 //    }
     override fun toString(): String {
-        return "${SimpleDateFormat("HH:MM").format(Date(time))} ${lat} $lon T:${temp}℃ ${wind} ${if(raining) "rain" else "clear"}\n"
+        return "${SimpleDateFormat("HH:MM").format(Date(time))} $lat $lon T:$temp℃ $wind ${if(rain==0.0) "clear" else "$rain mm/h"}\n"
     }
 
     fun getPrettyToString(c: Context):String{
-        return "${SimpleDateFormat("HH:MM").format(time)} ${getPlace(c).thoroughfare} T:${temp}℃ ${wind} ${if(raining) "rain" else "clear"}\n"
+        return "${SimpleDateFormat("HH:MM").format(time)} ${getPlace(c).thoroughfare} T:${temp}℃ ${wind} ${if(rain==0.0) "clear" else "$rain mm/h"}\n"
     }
 
     fun getPlace(c: Context):Address{

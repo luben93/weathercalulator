@@ -4,7 +4,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
-import android.arch.persistence.room.Room
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
 import android.location.Geocoder
@@ -70,7 +69,7 @@ class MyService : Service() {
         super.onCreate()
         val context = this
 //        Realm.init(context)
-        db =  Room.databaseBuilder(this, AppDatabase::class.java, "database-name").build()
+        db =  AppDatabase.getDatabase(context)
 
 //        val config =  RealmConfiguration.Builder()
 //                .deleteRealmIfMigrationNeeded()
@@ -160,9 +159,9 @@ class MyService : Service() {
                     val lastRowTime = Date()
                     for(keyval in json.getJSONArray("timeSeries")){
                         val rowtime = SimpleDateFormat(format).parse(keyval.getString("validTime"))
-                        if(rowtime.time-lastRowTime.time>halfHourInMs+halfHourInMs){
-                            return
-                        }
+//                        if(rowtime.time-lastRowTime.time>halfHourInMs+halfHourInMs){
+//                            return
+//                        }
 //                        Log.d(NewAppWidget.TAG, "${rowtime}")
 //                        if (Math.abs(time.time - rowtime.time) < 1800000) {
 //                                                    Log.d(TAG, "${rowtime}")
@@ -180,7 +179,8 @@ class MyService : Service() {
                                     "t" -> weatherData.temp = row.getJSONArray("values")[0] as Double //temp
                                     "wd" -> weatherData.windDirection = row.getJSONArray("values")[0] as Int//wind dir
                                     "ws" -> weatherData.windSpeed = row.getJSONArray("values")[0] as Double//windspeed
-                                    "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
+                                    "pmax" -> weatherData.rain = (row.getJSONArray("values")[0] as Double)//rain cat
+//                                    "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
                                     else -> Log.d(TAG, row.toString())
                                 }
                             }
@@ -196,7 +196,7 @@ class MyService : Service() {
                             Log.d(TAG,"did inserting ")
 
                         }catch (e:SQLiteConstraintException ){
-                            Log.d(TAG,"sqlite constraint do update ")
+                            Log.d(TAG,"sqlite constraint do update ",e)
 
                             db.weatherDao().updateAll(realWeatherData)
                         }catch (e: Exception){
@@ -240,12 +240,20 @@ class MyService : Service() {
 
         val appWidgetManager = AppWidgetManager.getInstance(this
                 .applicationContext)
-        LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
         val widgetText = data
+
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         views.setTextViewText(R.id.appwidget_text, widgetText)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
         appWidgetManager.updateAppWidget(thisWidget, views)
+
+
+        data += "\n"
+//        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ (halfHourInMs)).getPrettyToString (this)}
+        db.weatherDao().getAll().forEach { data.plus(it) }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
+
+
     }
 
 
