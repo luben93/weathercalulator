@@ -36,12 +36,20 @@
                 android:resource="@xml/new_app_widget_info" />
         </receiver>
 
+        <receiver android:name=".alarmed">
+
+        </receiver>
+
+        <receiver android:name=".MyService$AlarmReciver"/>
+
         <service
             android:name=".MyService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"></action>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+
             </intent-filter>
 
         </service>

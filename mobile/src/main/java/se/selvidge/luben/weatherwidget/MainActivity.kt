@@ -1,7 +1,6 @@
 package se.selvidge.luben.weatherwidget
 
 import android.content.*
-import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
 import android.support.design.widget.Snackbar
@@ -20,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         val YOUR_AWESOME_ACTION = "YourAwesomeAction"
     }
 //    public final
-    var TAG = "MWIDGET"
+    var TAG = "ACTIVITY"
     //TODO add options to select places for weather
      var myService:MyService? = null
     var myServiceConnecetion = object: ServiceConnection {
@@ -39,18 +38,22 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        startService(Intent( this,MyService::class.java))
+
         bindService( Intent(this,MyService::class.java),myServiceConnecetion, Context.BIND_AUTO_CREATE)
 
         strava.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
 
-            val intent = Intent(Intent.ACTION_RUN)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            intent.data = Uri.parse ("http://strava.com/nfc/record")
-            intent.putExtra("rideType","Ride")
-            startActivity(intent)
-
+//            val intent = Intent(Intent.ACTION_RUN)
+//            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//            intent.data = Uri.parse ("http://strava.com/nfc/record")
+//            intent.putExtra("rideType","Ride")
+//            startActivity(intent)
+            val intent = Intent(this,MyService::class.java)
+            intent.action = MyService.syncAction
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 
 
         }
@@ -61,6 +64,11 @@ class MainActivity : AppCompatActivity() {
 //        registerReceiver(this, IntentFilter())
 
 
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unbindService(myServiceConnecetion)
     }
 
     val broadCastReceiver = object : BroadcastReceiver() {

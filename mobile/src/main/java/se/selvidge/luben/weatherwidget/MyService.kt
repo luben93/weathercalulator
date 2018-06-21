@@ -35,15 +35,15 @@ class MyService : Service() {
     //maybe use Machine learning to train weather -> clothes model
 
     companion object {
-        fun getWeatherModel(): String {
+        fun getWeatherModel(context: Context) {
 //            return data
-            return "handen 21 c\n" +
-                    "östberga 20 c\n" +
-                    "bromma 25 c"
+            Log.d(TAG,"from static call")
+            context.sendBroadcast(Intent(context, MyService::class.java))
         }
         var widget:NewAppWidget? = null
         val syncAction="syncAction"
-        val halfHourInMs = 1800000;
+        val halfHourInMs = 1800000
+        val TAG = "SERVICE"
 
 //        var data = "not updated yet"
     }
@@ -56,13 +56,23 @@ class MyService : Service() {
     //bandhagen 59.267410, 18.059313  1
     //v'sterled 59.328446, 17.970361  2
     var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
-    val TAG = "SWIDGET"
+
 //    var weatherData:
 //    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
 
     override fun onBind(intent: Intent): IBinder {
 //        TODO("Return the communication channel to the service.")
         return mBinder
+    }
+
+    inner class AlarmReciver(): BroadcastReceiver() {
+
+        override fun onReceive(p0: Context?, p1: Intent?) {
+            Log.d(TAG,"------------------------local-----------------------\nbrodcast inner class $p0, $p1")
+
+            doUpdate()
+        }
+
     }
 
     override fun onCreate() {
@@ -78,31 +88,33 @@ class MyService : Service() {
 //        realm = Realm.getDefaultInstance()
 
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, MyService::class.java)
-        var alarmIntent = PendingIntent.getBroadcast(context, 0, intent, 0)
+        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
+            action = syncAction
+        }
+//        intentSync.setFlags(Intent.);
+        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-        alarmMgr.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HOUR,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
-        LocalBroadcastManager.getInstance(this).registerReceiver(br(), IntentFilter(syncAction))
+        alarmMgr.setInexactRepeating(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + AlarmManager.INTERVAL_HALF_HOUR,
+                AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)//todo verify that this runs
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
+//        registerReceiver(alarmed(), IntentFilter(syncAction))
+
+
+
         this.registerReceiver(object : BroadcastReceiver(){
             override fun onReceive(p0: Context?, p1: Intent?) {
+                Log.d(TAG,"did boot")
                onCreate()
             }
         },IntentFilter(Intent.ACTION_BOOT_COMPLETED))
 
 
-// Get a Realm instance for this thread
-
-
     }
 
-    inner class br : BroadcastReceiver() {
-        override fun onReceive(p0: Context?, p1: Intent?) {
-            Log.d(TAG,"brodcast $p0, $p1")
-            doUpdate()
-        }
-    }
+
 
     inner class LocalBinder : Binder() {
         /**
@@ -249,7 +261,7 @@ class MyService : Service() {
 
 
         data += "\n"
-//        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ (halfHourInMs)).getPrettyToString (this)}
+        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ (halfHourInMs*12)).getPrettyToString (this)}
         db.weatherDao().getAll().forEach { data.plus(it) }
         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
 
