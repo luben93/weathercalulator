@@ -24,32 +24,9 @@ open class WeatherData{
     var time=0L
 
 
-//    @Ignore
-//    var _place =  Address(Locale.ENGLISH)
-//    //    private var _place = Address(Locale.ENGLISH)
-//    @Ignore
-//    var place:Address
-//        set(value) {
-//            lat = value.latitude
-//            lon = value.longitude
-//            _place =value
-//        }
-//    get() = _place
-//        get() {
-//            var a = Address(Locale.ENGLISH)
-//            a.longitude = lon
-//            a.latitude = lat
-//            return a
-//        }
-//        set(value) {
-//             lon= value.longitude
-//            lat = value.latitude
-//        }
 
     //todo add human clothing model (values at when what clothes are suitable)
-//    var place:Address
-//    get() {return Address()
-//    }
+    //todo add get current weather from diffrence between DB rows
     override fun toString(): String {
         return "${SimpleDateFormat("HH:MM").format(Date(time))} $lat $lon T:$temp℃ $wind ${if(rain==0.0) "clear" else "$rain mm/h"}\n"
     }

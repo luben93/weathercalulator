@@ -78,14 +78,8 @@ class MyService : Service() {
     override fun onCreate() {
         super.onCreate()
         val context = this
-//        Realm.init(context)
         db =  AppDatabase.getDatabase(context)
 
-//        val config =  RealmConfiguration.Builder()
-//                .deleteRealmIfMigrationNeeded()
-//                .build()
-//        Realm.setDefaultConfiguration(config)
-//        realm = Realm.getDefaultInstance()
 
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         var intentSync = Intent(applicationContext, alarmed::class.java).apply {
@@ -125,12 +119,6 @@ class MyService : Service() {
     }
 
     fun doUpdate() {
-//        Log.d(TAG, "pre drop old${realm.where<WeatherData>().count()}")
-//        realm.beginTransaction()
-//        realm.where<WeatherData>().lessThan("time",Date()).findAll().forEach(WeatherData::deleteFromRealm)
-//        realm.commitTransaction()
-//        Log.d(TAG, "post drop old${realm.where<WeatherData>().count()}")
-
 
                 doAsync {
             try {
@@ -220,10 +208,6 @@ class MyService : Service() {
 //                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
 //                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
                             Log.d(TAG,"inserting $realWeatherData")
-//                        asyncRealm.beginTransaction()
-//                        asyncRealm.insertOrUpdate(realWeatherData.wind)
-//                        asyncRealm.insertOrUpdate(realWeatherData)
-//                        asyncRealm.commitTransaction()
 
 //                        }
                     }
@@ -235,20 +219,11 @@ class MyService : Service() {
     }
 
     internal fun updateViews(){
-//        val aRealm = Realm.getDefaultInstance()
-//        Log.d(TAG,"gonna updateView from service, db size${aRealm.where<WeatherData>().count()} first key ${aRealm.where<WeatherData>().findFirst()} cur date${Date().time}")
 
         data = ""
         locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time).getPrettyToString (this)}
 //        data += "\n"
 //        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
-
-
-        //todo does not find any
-//        aRealm.where<WeatherData>().between("time",Date(Date().time-halfHourInMs),Date(Date().time+halfHourInMs) ).
-//                findAll().forEach {
-//            Log.d(TAG,"${it.wind}")//todo does not fetch rain linked object
-//            data += it.getPrettyToString(this) }
 
         val appWidgetManager = AppWidgetManager.getInstance(this
                 .applicationContext)
