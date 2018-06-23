@@ -7,23 +7,26 @@ import android.location.Geocoder
 import java.text.SimpleDateFormat
 import java.util.*
 
-
 @Entity(primaryKeys = ["lon","lat","time"])
-open class WeatherData{
+data class WeatherData(
 
-    var temp=0.0
-    var rain=0.0
+    var temp:Double,
+    var rain:Double,
+    var lat:Double,
+    var lon:Double,
+    var windSpeed:Double,
+    var windDirection:Int,
+    var time:Long
+    ){
 
-    var lat=0.0
-    var lon=0.0
-    var windSpeed=0.0
-    var windDirection=0
+
+
     val wind:String
         get() = "W: $windSpeed m/s ${dir.values()[((windDirection)/45)]} "
 
-    var time=0L
 
-
+//val wind:String
+//    get() = "W: $windSpeed m/s ${dir.values()[((windDirection)/45)]} "
 
     //todo add human clothing model (values at when what clothes are suitable)
     //todo add get current weather from diffrence between DB rows
@@ -50,6 +53,9 @@ interface WeatherDataDAO{
     @Query("SELECT * FROM weatherData")
     fun getAll(): List<WeatherData>
 
+
+    @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 3600000  ORDER BY time ASC LIMIT 2")
+    fun findTwoByPlaceAndTime(lat:Double,lon:Double, timestamp: Long): List<WeatherData>
 
     @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 1800000 LIMIT 1")
     fun findByPlaceAndTime(lat:Double,lon:Double, timestamp: Long): WeatherData

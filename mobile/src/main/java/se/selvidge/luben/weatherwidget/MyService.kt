@@ -17,16 +17,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.WeatherData
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
-
-
-
-
 
 
 class MyService : Service() {
@@ -169,21 +166,30 @@ class MyService : Service() {
 //                            Log.d(TAG, datarow.toString())
                             var geo = Geocoder(this@MyService)
 //                            weatherData?.place =
-                            var weatherData = WeatherData()
-                            weatherData.lat = lat
-                            weatherData.lon = long
-                            weatherData.time = rowtime.time
-                            for (row in datarow) {
-                                Log.d(TAG, row.getString("name").toString())
-                                when (row.getString("name")) {
-                                    "t" -> weatherData.temp = row.getJSONArray("values")[0] as Double //temp
-                                    "wd" -> weatherData.windDirection = row.getJSONArray("values")[0] as Int//wind dir
-                                    "ws" -> weatherData.windSpeed = row.getJSONArray("values")[0] as Double//windspeed
-                                    "pmax" -> weatherData.rain = (row.getJSONArray("values")[0] as Double)//rain cat
-//                                    "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
-                                    else -> Log.d(TAG, row.toString())
-                                }
-                            }
+                            var weatherData = WeatherData(
+                                    datarow.smhiValue("t") as Double,
+                                    datarow.smhiValue("pmax") as Double,
+                                    lat,
+                                    long,
+                                    datarow.smhiValue("ws") as Double,
+                                    datarow.smhiValue("wd") as Int,
+                                    rowtime.time
+
+                                    )
+//                            weatherData.lat = lat
+//                            weatherData.lon = long
+//                            weatherData.time = rowtime.time
+//                            for (row in datarow) {
+//                                Log.d(TAG, row.getString("name").toString())
+//                                when (row.getString("name")) {
+//                                    "t" -> weatherData.temp = row.getJSONArray("values")[0] as Double //temp
+//                                    "wd" -> weatherData.windDirection = row.getJSONArray("values")[0] as Int//wind dir
+//                                    "ws" -> weatherData.windSpeed = row.getJSONArray("values")[0] as Double//windspeed
+//                                    "pmax" -> weatherData.rain = (row.getJSONArray("values")[0] as Double)//rain cat
+////                                    "pcat" -> weatherData.raining = (row.getJSONArray("values")[0] as Int != 0)//rain cat
+//                                    else -> Log.d(TAG, row.toString())
+//                                }
+//                            }
 
 
                         Log.d(TAG,weatherData.toString())
@@ -221,7 +227,7 @@ class MyService : Service() {
     internal fun updateViews(){
 
         data = ""
-        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time).getPrettyToString (this)}
+        locations.forEach{ pair -> data += db.weatherDao().findTwoByPlaceAndTime(pair.first,pair.second,Date().time).toWeatherData(Date()).getPrettyToString (this)}
 //        data += "\n"
 //        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
 
@@ -236,7 +242,11 @@ class MyService : Service() {
 
 
         data += "\n"
-        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ (halfHourInMs*12)).getPrettyToString (this)}
+        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time).getPrettyToString (this)}
+        locations.forEach{ pair -> data += db.weatherDao().
+                findByPlaceAndTime(pair.first,pair.second,Calendar.getInstance().
+                    apply { set(Calendar.HOUR,2) }.timeInMillis).
+                getPrettyToString (this)}
         db.weatherDao().getAll().forEach { data.plus(it) }
         LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
 
@@ -244,6 +254,41 @@ class MyService : Service() {
     }
 
 
+}
+
+fun List<WeatherData>.toWeatherData(now:Date):WeatherData{
+
+    val factor = (now.time.toDouble()-first().time.toDouble())/(last().time.toDouble() - first().time.toDouble())
+    return WeatherData(
+            first().temp.avrageFactor(last().temp,factor),
+            first().rain.avrageFactor(last().rain,factor),
+            first().lat,
+            first().lon,
+            first().windSpeed.avrageFactor(last().windSpeed,factor),
+            first().windDirection.avrageFactor(last().windDirection,factor),
+            first().time.avrageFactor(last().time,factor))
+}
+
+fun Double.avrageFactor(high:Double,factor: Double):Double=this + (high - this).times(factor)
+
+
+fun Int.avrageFactor(high:Int,factor: Double):Int{
+    return (this + (high - this).times(factor)).toInt()
+}
+
+fun Long.avrageFactor(high: Long,factor: Double):Long{
+    return (this + (high - this).times(factor)).toLong()
+}
+
+fun JSONArray.smhiValue(key:String): Number {
+    for (JsonObject in this){
+        try {
+            return JsonObject.takeIf { o -> o.getString(key).isNullOrEmpty() }?.getJSONArray("values")?.get(0) as Number
+        }catch (j:JSONException){
+
+        }
+    }
+    throw NoSuchFieldException("no key $key")
 }
 
 operator fun JSONArray.iterator(): Iterator<JSONObject>
