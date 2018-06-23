@@ -26,7 +26,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation"org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support.constraint:constraint-layout:1.1.0'
     implementation 'com.android.support:design:27.1.1'
@@ -35,8 +35,15 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     wearApp project(':wear')
     implementation 'com.google.android.gms:play-services-wearable:+'
+
+    implementation "com.google.android.gms:play-services-maps:15.0.1"
+    implementation "com.google.android.gms:play-services-places:15.0.1"
+//    compile project(path: ':mylibrary')
+
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+
     implementation "org.jetbrains.anko:anko:0.10.5"
+
     def room_version = "1.1.1"
     kapt "android.arch.persistence.room:compiler:${room_version}"
     implementation "android.arch.persistence.room:runtime:$room_version"

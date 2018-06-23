@@ -54,7 +54,7 @@ interface WeatherDataDAO{
     fun getAll(): List<WeatherData>
 
 
-    @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 3600000  ORDER BY time ASC LIMIT 2")
+    @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 3600000  ORDER BY time DESC LIMIT 2")
     fun findTwoByPlaceAndTime(lat:Double,lon:Double, timestamp: Long): List<WeatherData>
 
     @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 1800000 LIMIT 1")

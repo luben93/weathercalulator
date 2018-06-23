@@ -9,6 +9,10 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import com.google.android.gms.common.api.Status
+import com.google.android.gms.location.places.Place
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
+import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import se.selvidge.luben.weatherwidget.MyService.Companion.halfHourInMs
@@ -38,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-        startService(Intent( this,MyService::class.java))
+//        startService(Intent( this,MyService::class.java))//todo does this needs to be on
 
         bindService( Intent(this,MyService::class.java),myServiceConnecetion, Context.BIND_AUTO_CREATE)
 
@@ -55,7 +59,6 @@ class MainActivity : AppCompatActivity() {
             intent.action = MyService.syncAction
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 
-
         }
 
         debug.setOnClickListener{ view -> myService?.doUpdate() }
@@ -64,10 +67,26 @@ class MainActivity : AppCompatActivity() {
 //        registerReceiver(this, IntentFilter())
 
 
+        val autocompleteFragment = fragmentManager.findFragmentById(R.id.place_autocomplete_fragment) as PlaceAutocompleteFragment
+
+        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {//todo add permission question
+        override fun onPlaceSelected(place: Place) {
+            // TODO: Get info about the selected place.
+            Log.i(TAG, "Place: " + place.getName())
+        }
+
+            override fun onError(status: Status) {
+                // TODO: Handle the error.
+                Log.i(TAG, "An error occurred: $status")
+            }
+        })
+
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterReceiver(broadCastReceiver)
+
         unbindService(myServiceConnecetion)
     }
 
@@ -98,7 +117,7 @@ class MainActivity : AppCompatActivity() {
 //                data += it.getPrettyToString(this)
 //            }
             mainTextView.text = data
-            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + se.selvidge.luben.weatherwidget.MyService.Companion.halfHourInMs)}")
+            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + MyService.Companion.halfHourInMs)}")
         }catch (e: Exception){
             Log.w(TAG,"printintg data",e)
         }

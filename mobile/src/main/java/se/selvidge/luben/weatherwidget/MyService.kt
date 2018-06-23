@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
 import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
 import android.os.SystemClock
@@ -53,6 +54,7 @@ class MyService : Service() {
     //bandhagen 59.267410, 18.059313  1
     //v'sterled 59.328446, 17.970361  2
     var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
+//    lateinit var fusedLocationClient:FusedLocationProviderClient
 
 //    var weatherData:
 //    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
@@ -102,6 +104,13 @@ class MyService : Service() {
             }
         },IntentFilter(Intent.ACTION_BOOT_COMPLETED))
 
+    var locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
+    val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+
+
+//
+//        fusedLocationClient = LocationService.getFusedLocationProviderClient(this)
 
     }
 
@@ -116,6 +125,7 @@ class MyService : Service() {
     }
 
     fun doUpdate() {
+        Log.d(TAG,"gonna update")
 
                 doAsync {
             try {

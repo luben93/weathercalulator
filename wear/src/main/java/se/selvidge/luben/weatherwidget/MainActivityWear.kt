@@ -11,5 +11,6 @@ class MainActivityWear : WearableActivity() {
 
         // Enables Always-on
         setAmbientEnabled()
+//        hello_world = MyService
     }
 }
