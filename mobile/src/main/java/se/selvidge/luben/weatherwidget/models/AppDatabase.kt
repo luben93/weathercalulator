@@ -6,9 +6,11 @@ import android.arch.persistence.room.RoomDatabase
 import android.content.Context
 
 
-@Database(entities = arrayOf(WeatherData::class), version = 1)
+@Database(entities = arrayOf(WeatherData::class,Destination::class), version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun weatherDao(): WeatherDataDAO
+    abstract fun destinationDao(): DestinationDao
+
 
     companion object {
         private var INSTANCE: AppDatabase? = null
@@ -18,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
                     if (INSTANCE == null) {
                         INSTANCE = Room.databaseBuilder(context.applicationContext,
                                 AppDatabase::class.java, "word_database")
+                                .fallbackToDestructiveMigration()
                                 .build()
 
                     }
@@ -27,3 +30,6 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
+
+
+

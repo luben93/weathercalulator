@@ -24,16 +24,14 @@ class MainActivity : AppCompatActivity() {
     }
 //    public final
     var TAG = "ACTIVITY"
-    //TODO add options to select places for weather
+    //TODO add options to select places for weather, kinda of done
      var myService:MyService? = null
     var myServiceConnecetion = object: ServiceConnection {
          override fun onServiceDisconnected(p0: ComponentName?) {
-//             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
             myService = null
          }
 
          override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-//             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
              val binder = p1 as MyService.LocalBinder
              myService = binder.service
          }
@@ -42,7 +40,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-//        startService(Intent( this,MyService::class.java))//todo does this needs to be on
+//        startService(Intent( this,MyService::class.java))//todo does this needs to be on, dont seem like it
 
         bindService( Intent(this,MyService::class.java),myServiceConnecetion, Context.BIND_AUTO_CREATE)
 
@@ -61,7 +59,8 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        debug.setOnClickListener{ view -> myService?.doUpdate() }
+        debug.setOnClickListener{ view -> myService?.doAsyncPushToView()
+        }
         LocalBroadcastManager.getInstance(this)
                 .registerReceiver(broadCastReceiver, IntentFilter(YOUR_AWESOME_ACTION))
 //        registerReceiver(this, IntentFilter())
@@ -71,8 +70,8 @@ class MainActivity : AppCompatActivity() {
 
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {//todo add permission question
         override fun onPlaceSelected(place: Place) {
-            // TODO: Get info about the selected place.
             Log.i(TAG, "Place: " + place.getName())
+            myService?.addComuteDestination(place,Pair(21600000L,36000000L))//todo add view setting for interval
         }
 
             override fun onError(status: Status) {
@@ -81,6 +80,11 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        myService?.doAsyncPushToView()
     }
 
     override fun onDestroy() {

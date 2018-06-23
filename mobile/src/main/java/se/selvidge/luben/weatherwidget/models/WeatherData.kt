@@ -29,7 +29,7 @@ data class WeatherData(
 //    get() = "W: $windSpeed m/s ${dir.values()[((windDirection)/45)]} "
 
     //todo add human clothing model (values at when what clothes are suitable)
-    //todo add get current weather from diffrence between DB rows
+    //todo add get current weather from diffrence between DB rows, almost done
     override fun toString(): String {
         return "${SimpleDateFormat("HH:MM").format(Date(time))} $lat $lon T:$temp℃ $wind ${if(rain==0.0) "clear" else "$rain mm/h"}\n"
     }

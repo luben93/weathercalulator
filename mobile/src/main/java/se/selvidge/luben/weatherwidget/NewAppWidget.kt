@@ -54,7 +54,7 @@ class NewAppWidget : AppWidgetProvider() {
 //            views.setTextViewText(R.id.appwidget_text, widgetText)
 //            MyService.getWeatherModel()
 
-//            val intent = Intent(context, MyService::class.java)//todo send intent to service
+//            val intent = Intent(context, MyService::class.java)//todone send intent to service
             val intent = Intent(context, MainActivity::class.java)
 //            val intent = Intent(context, this::class.java)
 //            intent.putExtra("key","hehe")
