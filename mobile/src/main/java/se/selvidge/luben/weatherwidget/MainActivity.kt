@@ -15,12 +15,11 @@ import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
-import se.selvidge.luben.weatherwidget.MyService.Companion.halfHourInMs
-import java.util.*
 
 class MainActivity : AppCompatActivity() {
     companion object {
         val YOUR_AWESOME_ACTION = "YourAwesomeAction"
+        val VIEW_MODEL_UPDATED = "VIEW_MODEL_UPDATED"
     }
 //    public final
     var TAG = "ACTIVITY"
@@ -62,7 +61,10 @@ class MainActivity : AppCompatActivity() {
         debug.setOnClickListener{ view -> myService?.doAsyncPushToView()
         }
         LocalBroadcastManager.getInstance(this)
-                .registerReceiver(broadCastReceiver, IntentFilter(YOUR_AWESOME_ACTION))
+                .registerReceiver(broadCastReceiver, IntentFilter().apply {
+                    addAction(YOUR_AWESOME_ACTION)
+                    addAction(VIEW_MODEL_UPDATED)
+                })
 //        registerReceiver(this, IntentFilter())
 
 
@@ -89,8 +91,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(broadCastReceiver)
+        try {
+            unregisterReceiver(broadCastReceiver)
+        }  catch (re:RuntimeException){
 
+        }
         unbindService(myServiceConnecetion)
     }
 
@@ -98,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(contxt: Context?, intent: Intent?) {
         Log.d(TAG,"did recive")
             when (intent?.action) {
+                VIEW_MODEL_UPDATED -> UpdateView()
                 YOUR_AWESOME_ACTION -> haha()
                 "haha" -> haha()
                 else -> haha()
@@ -111,17 +117,12 @@ class MainActivity : AppCompatActivity() {
     }
     fun UpdateView() {
         try {
-            Log.d(TAG,"startign view update")
-//            var aRealm = Realm.getDefaultInstance()
-
             var data = ""
-//            aRealm.where<WeatherData>().between("time", Date(Date().time - halfHourInMs), Date(Date().time + halfHourInMs)).findAll().forEach {
-//                Log.d(TAG, "looping Weathers $it")
-
-//                data += it.getPrettyToString(this)
-//            }
+            myService?.viewModel?.forEach {
+                data += it.getPrettyToString(this)
+            }
             mainTextView.text = data
-            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + MyService.Companion.halfHourInMs)}")
+//            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + MyService.Companion.halfHourInMs)}")
         }catch (e: Exception){
             Log.w(TAG,"printintg data",e)
         }

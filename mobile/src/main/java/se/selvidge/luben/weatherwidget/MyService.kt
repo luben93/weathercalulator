@@ -23,10 +23,7 @@ import org.jetbrains.anko.locationManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import se.selvidge.luben.weatherwidget.models.AppDatabase
-import se.selvidge.luben.weatherwidget.models.Destination
-import se.selvidge.luben.weatherwidget.models.RouteStep
-import se.selvidge.luben.weatherwidget.models.WeatherData
+import se.selvidge.luben.weatherwidget.models.*
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,8 +49,10 @@ class MyService : Service() {
 
 //        var data = "not updated yet"
     }
-
-    val activityIntent = Intent(MainActivity.YOUR_AWESOME_ACTION)
+    var data = ""
+    var client = OkHttpClient()
+    var viewModel = listOf<WeatherView>()
+    val viewModelUpdated = Intent(MainActivity.VIEW_MODEL_UPDATED)
     val mBinder = LocalBinder()
     val weatherPointResolutionKm = 2
     val weatherPointResolutionSeconds = 1200
@@ -130,13 +129,14 @@ class MyService : Service() {
         var timePassed = 0;
 //        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
         for (step in steps){
-            timePassed += step.getJSONObject("duration").getInt("value")
+            val elapsed = step.getJSONObject("duration").getInt("value")
+            timePassed += elapsed
             if(timePassed>weatherPointResolutionSeconds){
 
                 timePassed=0
                 val end = step.getJSONObject("end_location")
 //                Log.d(TAG,"$step , $end")
-                db.routeStepDao().insertAll(RouteStep( end.getDouble("lat"),end.getDouble("lng"), dest.id!!))
+                db.routeStepDao().insertAll(RouteStep( end.getDouble("lat"),end.getDouble("lng"), elapsed, dest.id!!))
             }
         }
 
@@ -156,7 +156,12 @@ class MyService : Service() {
         doAsync {
             val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
-            db.destinationDao().insertAll(Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude,currentLocation.longitude,interval.first, interval.second))
+            var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude,currentLocation.longitude,interval.first, interval.second)
+            val id = db.destinationDao().insert(destination)
+            destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
+//            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
+            getRouteToDestination(destination)
+
         }
     }
 
@@ -174,7 +179,6 @@ class MyService : Service() {
                 val geo = Geocoder(this@MyService)
 //                data = ""
                 db.destinationDao().getAll().forEach {
-                     getRouteToDestination(it)
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
 //            getJson(locations[0].first, locations[0].second, Date())
@@ -190,8 +194,6 @@ class MyService : Service() {
 
 
 
-    var data = ""
-    var client = OkHttpClient()
 
 
     private fun getWeatherJson(step: RouteStep, time: Date) {
@@ -281,8 +283,16 @@ class MyService : Service() {
     }
 
     private fun updateViews(){
-            data = ""
-        val geo = Geocoder(this@MyService)
+
+        //widget
+        val appWidgetManager = AppWidgetManager.getInstance(this
+                .applicationContext)
+        val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
+        val thisWidget = ComponentName(this, NewAppWidget::class.java)
+
+        viewModel = listOf()
+
+        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
         val c = Calendar.getInstance() // today
 //        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
         c.set(Calendar.HOUR, 0)
@@ -290,44 +300,66 @@ class MyService : Service() {
         c.set(Calendar.SECOND, 0)
         c.set(Calendar.MILLISECOND, 0)
 //        Log.d(TAG,db.weatherDao().getAll().toString())
-        val millistamp = c.timeInMillis
-//          Log.d(TAG,db.destinationDao().getAll().toString())
-            db.destinationDao().getNext(Date().time-millistamp).let { pair ->
+        val millistamp = Date().time - c.timeInMillis
+        //setup done
+
+
+
+
+        //setting widget
+        views.setTextViewText(R.id.appwidget_text, data)
+        appWidgetManager.updateAppWidget(thisWidget, views)
+
+
+
+
+
+
+
+        //main view model population loop
+        Log.d(TAG,"time until start $millistamp")
+          Log.d(TAG,db.destinationDao().getAll().toString())
+            db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
                 //todo use get next destination, check that we are close to starting point
-//                Log.d(TAG, pair.toString())
+                Log.d(TAG, pair.toString())
+
                 db.routeStepDao().getAllFromDestination(pair.id!!).forEach {
-                    data += geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare
-                    data += db.weatherDao().getFromRoute(it.id!!, Date().time)
+//       geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare
+
+                        val time = Date().time+(it.timeElapsed*1000)
+                    val weather = db.weatherDao().getFromRoute(it.id!!,time )
+//                    Log.d(TAG,"pre create weatherview $it,$weather")
+                    val row =  weather?.let { it1 -> WeatherView(it1,it.lat,it.lon) }
+                    when {
+                        row != null -> viewModel += row
+                        else -> Log.e(TAG,"something went wrong $it $pair $time")
+                    }
                 }
             }
 //        data += "\n"
 //        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
 
-            val appWidgetManager = AppWidgetManager.getInstance(this
-                    .applicationContext)
-            val widgetText = data
-
-            val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
-            views.setTextViewText(R.id.appwidget_text, widgetText)
-            val thisWidget = ComponentName(this, NewAppWidget::class.java)
-            appWidgetManager.updateAppWidget(thisWidget, views)
 
 
-            data += "\n"
+//            data += "\n"
 //            db.destinationDao().getAll().forEach { pair -> data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Date().time).getPrettyToString(this) }
 //            db.destinationDao().getAll().forEach { pair ->
 //                data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Calendar.getInstance().apply { set(Calendar.HOUR, 2) }.timeInMillis).getPrettyToString(this)
 //            }
 //            db.weatherDao().getAll().forEach { data.plus(it) }
-            LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
 
+
+        //sending full data to app view
+        Log.d(TAG,"gonna send intent")
+            LocalBroadcastManager.getInstance(this).sendBroadcast(viewModelUpdated)
 //        return data
     }
 
 
+
 }
 
-fun List<WeatherData>.toWeatherData(now:Date):WeatherData{
+fun Pair<WeatherData,WeatherData>.toWeatherData(now:Date):WeatherData{
 
     val factor = (now.time.toDouble()-first().time.toDouble())/(last().time.toDouble() - first().time.toDouble())
     return WeatherData(
@@ -339,6 +371,9 @@ fun List<WeatherData>.toWeatherData(now:Date):WeatherData{
             first().windDirection.avrageFactor(last().windDirection,factor),
             first().time.avrageFactor(last().time,factor))
 }
+
+fun Pair<WeatherData,Any?>.first() = first
+fun Pair<Any?,WeatherData>.last() = second
 
 fun Double.avrageFactor(high:Double,factor: Double):Double=this + (high - this).times(factor)
 
@@ -374,3 +409,20 @@ operator fun JSONArray.iterator(): Iterator<JSONObject>
         = (0 until length()).asSequence().map { get(it) as JSONObject }.iterator()
 
 fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH,this)
+
+fun DestinationDao.getNextWrapAround(time: Long): Destination?{
+    var out = getNext(time)
+    if(out==null){
+        out =getNext(0)
+    }
+    return out
+
+}
+
+fun RouteStepDao.updateOrInsert(input:RouteStep){
+    var back = getFromLatLon(input.lat,input.lon)
+    if(back != null){
+        back
+    }
+
+}
