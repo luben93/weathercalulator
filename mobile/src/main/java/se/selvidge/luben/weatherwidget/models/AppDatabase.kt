@@ -6,10 +6,11 @@ import android.arch.persistence.room.RoomDatabase
 import android.content.Context
 
 
-@Database(entities = arrayOf(WeatherData::class,Destination::class), version = 2)
+@Database(entities = arrayOf(WeatherData::class,Destination::class,RouteStep::class), version = 3)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun weatherDao(): WeatherDataDAO
     abstract fun destinationDao(): DestinationDao
+    abstract fun routeStepDao(): RouteStepDao
 
 
     companion object {

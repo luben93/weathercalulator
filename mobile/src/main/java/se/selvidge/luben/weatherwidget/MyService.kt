@@ -16,16 +16,16 @@ import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
 import com.google.android.gms.location.places.Place
-import com.google.android.gms.maps.model.LatLng
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.locationManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import se.selvidge.luben.weatherwidget.MyService.Companion.TAG
 import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.Destination
+import se.selvidge.luben.weatherwidget.models.RouteStep
 import se.selvidge.luben.weatherwidget.models.WeatherData
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -103,6 +103,7 @@ class MyService : Service() {
         LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
 //        registerReceiver(alarmed(), IntentFilter(syncAction))
 
+//        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
 
 
         this.registerReceiver(object : BroadcastReceiver(){
@@ -114,8 +115,7 @@ class MyService : Service() {
     }
 
     @SuppressLint("MissingPermission")//todo add permission question
-    internal fun getRouteToDestination(dest: Destination):List<LatLng>{
-        var locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
+    internal fun getRouteToDestination(dest: Destination){
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
         val mode="bicycling"
@@ -128,18 +128,18 @@ class MyService : Service() {
         val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).
                 getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0;
-        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
+//        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
         for (step in steps){
             timePassed += step.getJSONObject("duration").getInt("value")
             if(timePassed>weatherPointResolutionSeconds){
 
                 timePassed=0
                 val end = step.getJSONObject("end_location")
-                Log.d(TAG,"$step , $end")
-                points + LatLng(end.getDouble("lat"),end.getDouble("lng"))
+//                Log.d(TAG,"$step , $end")
+                db.routeStepDao().insertAll(RouteStep( end.getDouble("lat"),end.getDouble("lng"), dest.id!!))
             }
         }
-        return points
+
     }
 
 
@@ -151,9 +151,12 @@ class MyService : Service() {
             get() = this@MyService
     }
 
-    fun addComuteDestination(place: Place,interval : Pair<Long,Long>) {
+    @SuppressLint("MissingPermission")
+    fun addComuteDestination(place: Place, interval : Pair<Long,Long>) {
         doAsync {
-            db.destinationDao().insertAll(Destination(place.latLng.latitude, place.latLng.longitude, interval.first, interval.second))
+            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+            db.destinationDao().insertAll(Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude,currentLocation.longitude,interval.first, interval.second))
         }
     }
 
@@ -171,9 +174,8 @@ class MyService : Service() {
                 val geo = Geocoder(this@MyService)
 //                data = ""
                 db.destinationDao().getAll().forEach {
-                    val locations = getRouteToDestination(it)
-//                    data+= "\ndest: ${geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare}\n"
-                    locations.forEach { loc -> getWeatherJson(loc.latitude, loc.longitude, Date()) }
+                     getRouteToDestination(it)
+                    db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
 //            getJson(locations[0].first, locations[0].second, Date())
                 updateViews()
@@ -192,17 +194,17 @@ class MyService : Service() {
     var client = OkHttpClient()
 
 
-    private fun getWeatherJson(lat: Double, long: Double, time: Date) {
+    private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
-        Log.d(TAG,"starting weather fetch $lat $long")
+//        Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
         var request = Request.Builder()
-                .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${long.format(6)}/lat/${lat.format(6)}/data.json")
+                .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
-        Log.d(TAG,"weather requset url ${request.url()}")
+//        Log.d(TAG,"weather requset url ${request.url()}")
               val response= client.newCall(request).execute()
                 val out = response.body()?.string()
-                Log.d(TAG, out)
+//                Log.d(TAG, out)
                 val json = JSONObject(out)
 
 //        val asyncRealm = Realm.getDefaultInstance()
@@ -224,8 +226,7 @@ class MyService : Service() {
                             var weatherData = WeatherData(
                                     datarow.smhiValue("t") as Double,
                                     datarow.smhiValue("pmax") as Double,
-                                    lat,
-                                    long,
+                                    step.id!!,
                                     datarow.smhiValue("ws") as Double,
                                     datarow.smhiValue("wd") as Int,
                                     rowtime.time
@@ -247,28 +248,28 @@ class MyService : Service() {
 //                            }
 
 
-                        Log.d(TAG,weatherData.toString())
+//                        Log.d(TAG,weatherData.toString())
                             val realWeatherData = weatherData
 //                            data += realWeatherData
                         try {
-                            Log.d(TAG,"inserting $realWeatherData")
+//                            Log.d(TAG,"inserting $realWeatherData")
 
                             db.weatherDao().insertAll(realWeatherData)
-                            Log.d(TAG,"did inserting ")
+//                            Log.d(TAG,"did inserting ")
 
                         }catch (e:SQLiteConstraintException ){
-                            Log.d(TAG,"sqlite constraint do update ",e)
+//                            Log.d(TAG,"sqlite constraint do update ",e)
 
                             db.weatherDao().updateAll(realWeatherData)
                         }catch (e: Exception){
-                            Log.d(TAG,"other execption $e \n do update ")
+                            Log.w(TAG,"other execption $e \n do update ")
 
                             db.weatherDao().updateAll(realWeatherData)
                         }
 
 //                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
 //                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
-                            Log.d(TAG,"inserting $realWeatherData")
+//                            Log.d(TAG,"inserting $realWeatherData")
 
 //                        }
                     }
@@ -281,18 +282,24 @@ class MyService : Service() {
 
     private fun updateViews(){
             data = ""
+        val geo = Geocoder(this@MyService)
         val c = Calendar.getInstance() // today
 //        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
         c.set(Calendar.HOUR, 0)
         c.set(Calendar.MINUTE, 0)
         c.set(Calendar.SECOND, 0)
         c.set(Calendar.MILLISECOND, 0)
-        Log.d(TAG,db.weatherDao().getAll().toString())
+//        Log.d(TAG,db.weatherDao().getAll().toString())
         val millistamp = c.timeInMillis
-            db.destinationDao().getClosest(Date().time-millistamp).let { pair -> //todo iterate over points on the route instead of only destination
-                Log.d(TAG, pair.toString())
-                data += db.weatherDao().findTwoByPlaceAndTime(pair.lat, pair.lon, Date().time)
-                        .toWeatherData(Date()).getPrettyToString(this) }
+//          Log.d(TAG,db.destinationDao().getAll().toString())
+            db.destinationDao().getNext(Date().time-millistamp).let { pair ->
+                //todo use get next destination, check that we are close to starting point
+//                Log.d(TAG, pair.toString())
+                db.routeStepDao().getAllFromDestination(pair.id!!).forEach {
+                    data += geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare
+                    data += db.weatherDao().getFromRoute(it.id!!, Date().time)
+                }
+            }
 //        data += "\n"
 //        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
 
@@ -307,11 +314,11 @@ class MyService : Service() {
 
 
             data += "\n"
-            db.destinationDao().getAll().forEach { pair -> data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Date().time).getPrettyToString(this) }
-            db.destinationDao().getAll().forEach { pair ->
-                data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Calendar.getInstance().apply { set(Calendar.HOUR, 2) }.timeInMillis).getPrettyToString(this)
-            }
-            db.weatherDao().getAll().forEach { data.plus(it) }
+//            db.destinationDao().getAll().forEach { pair -> data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Date().time).getPrettyToString(this) }
+//            db.destinationDao().getAll().forEach { pair ->
+//                data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Calendar.getInstance().apply { set(Calendar.HOUR, 2) }.timeInMillis).getPrettyToString(this)
+//            }
+//            db.weatherDao().getAll().forEach { data.plus(it) }
             LocalBroadcastManager.getInstance(this).sendBroadcast(activityIntent)
 
 //        return data
@@ -326,8 +333,8 @@ fun List<WeatherData>.toWeatherData(now:Date):WeatherData{
     return WeatherData(
             first().temp.avrageFactor(last().temp,factor),
             first().rain.avrageFactor(last().rain,factor),
-            first().lat,
-            first().lon,
+            first().routeId,
+//            first().lon,
             first().windSpeed.avrageFactor(last().windSpeed,factor),
             first().windDirection.avrageFactor(last().windDirection,factor),
             first().time.avrageFactor(last().time,factor))
@@ -357,7 +364,7 @@ fun JSONArray.smhiValue(key:String): Number {
 //            return found?.getJSONArray("values")?.get(0) as Number
 
         }catch (j:JSONException){
-            Log.w(TAG,"smhiVal fail",j)
+//            Log.w(TAG,"smhiVal fail",j)
         }
     }
     throw NoSuchFieldException("no key $key")

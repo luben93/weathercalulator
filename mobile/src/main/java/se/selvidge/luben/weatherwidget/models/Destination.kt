@@ -2,9 +2,16 @@ package se.selvidge.luben.weatherwidget.models
 
 import android.arch.persistence.room.*
 
-@Entity(primaryKeys = ["lat","lon"])
-data class Destination(var lat:Double, var lon:Double, var comuteStartIntervalStart: Long,var comuteStartIntervalStop: Long) {
-
+@Entity
+data class Destination(
+        var lat:Double,
+        var lon:Double,
+        var fromLat:Double,
+        var fromLon:Double,
+        var comuteStartIntervalStart: Long,
+        var comuteStartIntervalStop: Long) {
+    @PrimaryKey(autoGenerate = true)
+    var id:Int?=null
 }
 
 @Dao
@@ -13,8 +20,8 @@ interface DestinationDao{
     fun getAll(): List<Destination>
 
     //todo maybe get next starting instead
-    @Query("SELECT * FROM destination WHERE comuteStartIntervalStart < :time+1800000 AND comuteStartIntervalStop > :time LIMIT 1")
-    fun getClosest(time: Long): Destination
+    @Query("SELECT * FROM destination WHERE comuteStartIntervalStart > :time-1800000  LIMIT 1")
+    fun getNext(time: Long): Destination
 
 
     @Insert
