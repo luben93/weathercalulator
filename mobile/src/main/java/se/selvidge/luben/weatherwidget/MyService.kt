@@ -23,6 +23,7 @@ import org.jetbrains.anko.locationManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import se.selvidge.luben.weatherwidget.MyService.Companion.TAG
 import se.selvidge.luben.weatherwidget.models.*
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -37,18 +38,20 @@ class MyService : Service() {
     companion object {
         fun getWeatherModel(context: Context) {
 //            return data
-            Log.d(TAG,"from static call")
+            Log.d(TAG, "from static call")
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
-        var widget:NewAppWidget? = null
-        val syncAction="syncAction"
+
+        var widget: NewAppWidget? = null
+        val syncAction = "syncAction"
         val halfHourInMs = 1800000
         val TAG = "SERVICE"
-        var now:Long = 0
+        var now: Long = 0
             get() = Date().time
 
 //        var data = "not updated yet"
     }
+
     var data = ""
     var client = OkHttpClient()
     var viewModel = listOf<WeatherView>()
@@ -56,7 +59,7 @@ class MyService : Service() {
     val mBinder = LocalBinder()
     val weatherPointResolutionKm = 2
     val weatherPointResolutionSeconds = 1200
-    lateinit var db:AppDatabase
+    lateinit var db: AppDatabase
     //place lat,long
     //home 59.179741,18.127764        0
     //bandhagen 59.267410, 18.059313  1
@@ -71,10 +74,10 @@ class MyService : Service() {
         return mBinder
     }
 
-    inner class AlarmReciver(): BroadcastReceiver() {
+    inner class AlarmReciver() : BroadcastReceiver() {
 
         override fun onReceive(p0: Context?, p1: Intent?) {
-            Log.d(TAG,"------------------------local-----------------------\nbrodcast inner class $p0, $p1")
+            Log.d(TAG, "------------------------local-----------------------\nbrodcast inner class $p0, $p1")
 
             doUpdate()
         }
@@ -84,7 +87,7 @@ class MyService : Service() {
     override fun onCreate() {
         super.onCreate()
         val context = this
-        db =  AppDatabase.getDatabase(context)
+        db = AppDatabase.getDatabase(context)
 
 
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -96,7 +99,7 @@ class MyService : Service() {
 
         alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() +100,
+                SystemClock.elapsedRealtime() + 100,
                 AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)//todo verify that this runs
 
         LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
@@ -105,38 +108,37 @@ class MyService : Service() {
 //        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
 
 
-        this.registerReceiver(object : BroadcastReceiver(){
+        this.registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(p0: Context?, p1: Intent?) {
-                Log.d(TAG,"did boot")
-               onCreate()
+                Log.d(TAG, "did boot")
+                onCreate()
             }
-        },IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo verify this
+        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo verify this
     }
 
     @SuppressLint("MissingPermission")//todo add permission question
-    internal fun getRouteToDestination(dest: Destination){
+    internal fun getRouteToDestination(dest: Destination) {
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
-        val mode="bicycling"
+        val mode = "bicycling"
         var request = Request.Builder()
-                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.latitude.toString()+","+currentLocation.longitude}&destination=${dest.lat.toString()+","+dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
+                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.latitude.toString() + "," + currentLocation.longitude}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
-        val response= client.newCall(request).execute()
+        val response = client.newCall(request).execute()
         val out = response.body()?.string()
         Log.d(TAG, out)
-        val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).
-                getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
+        val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0;
 //        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
-        for (step in steps){
+        for (step in steps) {
             val elapsed = step.getJSONObject("duration").getInt("value")
             timePassed += elapsed
-            if(timePassed>weatherPointResolutionSeconds){
+            if (timePassed > weatherPointResolutionSeconds) {
 
-                timePassed=0
+                timePassed = 0
                 val end = step.getJSONObject("end_location")
 //                Log.d(TAG,"$step , $end")
-                db.routeStepDao().insertAll(RouteStep( end.getDouble("lat"),end.getDouble("lng"), elapsed, dest.id!!))
+                db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), elapsed, dest.id!!))
             }
         }
 
@@ -152,11 +154,11 @@ class MyService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    fun addComuteDestination(place: Place, interval : Pair<Long,Long>) {
+    fun addComuteDestination(place: Place, interval: Pair<Long, Long>) {
         doAsync {
             val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
-            var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude,currentLocation.longitude,interval.first, interval.second)
+            var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude, currentLocation.longitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
 //            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
@@ -165,16 +167,16 @@ class MyService : Service() {
         }
     }
 
-    fun doAsyncPushToView(){
+    fun doAsyncPushToView() {
         doAsync {
             updateViews()
         }
     }
 
     fun doUpdate() {
-        Log.d(TAG,"gonna update")
+        Log.d(TAG, "gonna update")
 
-                doAsync {
+        doAsync {
             try {
                 val geo = Geocoder(this@MyService)
 //                data = ""
@@ -193,9 +195,6 @@ class MyService : Service() {
     }
 
 
-
-
-
     private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
@@ -204,36 +203,36 @@ class MyService : Service() {
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
 //        Log.d(TAG,"weather requset url ${request.url()}")
-              val response= client.newCall(request).execute()
-                val out = response.body()?.string()
+        val response = client.newCall(request).execute()
+        val out = response.body()?.string()
 //                Log.d(TAG, out)
-                val json = JSONObject(out)
+        val json = JSONObject(out)
 
 //        val asyncRealm = Realm.getDefaultInstance()
-                try {
-                    val format = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-                    val lastRowTime = Date()
-                    for(keyval in json.getJSONArray("timeSeries")){
-                        val rowtime = SimpleDateFormat(format).parse(keyval.getString("validTime"))
+        try {
+            val format = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            val lastRowTime = Date()
+            for (keyval in json.getJSONArray("timeSeries")) {
+                val rowtime = SimpleDateFormat(format).parse(keyval.getString("validTime"))
 //                        if(rowtime.time-lastRowTime.time>halfHourInMs+halfHourInMs){
 //                            return
 //                        }
 //                        Log.d(NewAppWidget.TAG, "${rowtime}")
 //                        if (Math.abs(time.time - rowtime.time) < 1800000) {
 //                                                    Log.d(TAG, "${rowtime}")
-                            val datarow = keyval.getJSONArray("parameters")
+                val datarow = keyval.getJSONArray("parameters")
 //                            Log.d(TAG, datarow.toString())
-                            var geo = Geocoder(this@MyService)
+                var geo = Geocoder(this@MyService)
 //                            weatherData?.place =
-                            var weatherData = WeatherData(
-                                    datarow.smhiValue("t") as Double,
-                                    datarow.smhiValue("pmax") as Double,
-                                    step.id!!,
-                                    datarow.smhiValue("ws") as Double,
-                                    datarow.smhiValue("wd") as Int,
-                                    rowtime.time
+                var weatherData = WeatherData(
+                        datarow.smhiValue("t") as Double,
+                        datarow.smhiValue("pmax") as Double,
+                        step.id!!,
+                        datarow.smhiValue("ws") as Double,
+                        datarow.smhiValue("wd") as Int,
+                        rowtime.time
 
-                                    )
+                )
 //                            weatherData.lat = lat
 //                            weatherData.lon = long
 //                            weatherData.time = rowtime.time
@@ -251,38 +250,38 @@ class MyService : Service() {
 
 
 //                        Log.d(TAG,weatherData.toString())
-                            val realWeatherData = weatherData
+                val realWeatherData = weatherData
 //                            data += realWeatherData
-                        try {
+                try {
 //                            Log.d(TAG,"inserting $realWeatherData")
 
-                            db.weatherDao().insertAll(realWeatherData)
+                    db.weatherDao().insertAll(realWeatherData)
 //                            Log.d(TAG,"did inserting ")
 
-                        }catch (e:SQLiteConstraintException ){
+                } catch (e: SQLiteConstraintException) {
 //                            Log.d(TAG,"sqlite constraint do update ",e)
 
-                            db.weatherDao().updateAll(realWeatherData)
-                        }catch (e: Exception){
-                            Log.w(TAG,"other execption $e \n do update ")
+                    db.weatherDao().updateAll(realWeatherData)
+                } catch (e: Exception) {
+                    Log.w(TAG, "other execption $e \n do update ")
 
-                            db.weatherDao().updateAll(realWeatherData)
-                        }
+                    db.weatherDao().updateAll(realWeatherData)
+                }
 
 //                            data += "${realWeatherData.place?.thoroughfare} T:${realWeatherData.temp}℃ ${realWeatherData.wind} " +
 //                                    "${if(realWeatherData.raining) "rain" else "clear"}\n"
 //                            Log.d(TAG,"inserting $realWeatherData")
 
 //                        }
-                    }
-                } catch (pe: ParseException) {
-                    pe.printStackTrace()
-                } catch (e: Exception ){
-                    e.printStackTrace()
-                }
+            }
+        } catch (pe: ParseException) {
+            pe.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    private fun updateViews(){
+    private fun updateViews() {
 
         //widget
         val appWidgetManager = AppWidgetManager.getInstance(this
@@ -304,41 +303,34 @@ class MyService : Service() {
         //setup done
 
 
-
-
         //setting widget
-        views.setTextViewText(R.id.appwidget_text, data)
-        appWidgetManager.updateAppWidget(thisWidget, views)
-
-
-
-
-
 
 
         //main view model population loop
-        Log.d(TAG,"time until start $millistamp")
-          Log.d(TAG,db.destinationDao().getAll().toString())
-            db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
-                //todo use get next destination, check that we are close to starting point
-                Log.d(TAG, pair.toString())
+        Log.d(TAG, "time until start $millistamp")
+        Log.d(TAG, db.destinationDao().getAll().toString())
+        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
+            //todo use get next destination, check that we are close to starting point
+            Log.d(TAG, pair.toString())
 
-                db.routeStepDao().getAllFromDestination(pair.id!!).forEach {
-//       geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare
+            db.routeStepDao().getAllFromDestination(pair.id!!).forEach {
+                //       geo.getFromLocation(it.lat, it.lon, 1).first().thoroughfare
 
-                        val time = Date().time+(it.timeElapsed*1000)
-                    val weather = db.weatherDao().getFromRoute(it.id!!,time )
-//                    Log.d(TAG,"pre create weatherview $it,$weather")
-                    val row =  weather?.let { it1 -> WeatherView(it1,it.lat,it.lon) }
-                    when {
-                        row != null -> viewModel += row
-                        else -> Log.e(TAG,"something went wrong $it $pair $time")
+                val time = Date().time + (it.timeElapsed * 1000)
+                db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
+                    db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
+                        //                    Log.d(TAG,"pre create weatherview $it,$weather")
+                        val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
+                        weather?.let { it1 ->
+                            Log.d(TAG,"weather lerp done: $time \n $prevWeather \n $nextWeather \n $weather")
+                            viewModel += WeatherView(it1, it.lat, it.lon)
+                        }
                     }
                 }
             }
+        }
 //        data += "\n"
 //        locations.forEach{ pair -> data += db.weatherDao().findByPlaceAndTime(pair.first,pair.second,Date().time+ halfHourInMs*12).getPrettyToString (this)}
-
 
 
 //            data += "\n"
@@ -347,47 +339,56 @@ class MyService : Service() {
 //                data += db.weatherDao().findByPlaceAndTime(pair.lat, pair.lon, Calendar.getInstance().apply { set(Calendar.HOUR, 2) }.timeInMillis).getPrettyToString(this)
 //            }
 //            db.weatherDao().getAll().forEach { data.plus(it) }
+//        data=""
 
+        views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
+            val out = acc+row.getPrettyToString(this@MyService)
+            out })
+        appWidgetManager.updateAppWidget(thisWidget, views)
 
         //sending full data to app view
-        Log.d(TAG,"gonna send intent")
-            LocalBroadcastManager.getInstance(this).sendBroadcast(viewModelUpdated)
+        Log.d(TAG, "gonna send intent")
+        LocalBroadcastManager.getInstance(this).sendBroadcast(viewModelUpdated)
 //        return data
     }
 
 
-
 }
 
-fun Pair<WeatherData,WeatherData>.toWeatherData(now:Date):WeatherData{
-
-    val factor = (now.time.toDouble()-first().time.toDouble())/(last().time.toDouble() - first().time.toDouble())
+fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
+    val factor = (now.toDouble() - first().time.toDouble()) / (last().time.toDouble() - first().time.toDouble())
+    val time = first().time.lerp(last().time, factor)
+    Log.d(TAG,"weather data first ${first.time} last ${last().time} out$time")
     return WeatherData(
-            first().temp.avrageFactor(last().temp,factor),
-            first().rain.avrageFactor(last().rain,factor),
+            first().temp.lerp(last().temp, factor),
+            first().rain.lerp(last().rain, factor),
             first().routeId,
 //            first().lon,
-            first().windSpeed.avrageFactor(last().windSpeed,factor),
-            first().windDirection.avrageFactor(last().windDirection,factor),
-            first().time.avrageFactor(last().time,factor))
+            first().windSpeed.lerp(last().windSpeed, factor),
+            first().windDirection.lerp(last().windDirection, factor),
+            time)
 }
 
-fun Pair<WeatherData,Any?>.first() = first
-fun Pair<Any?,WeatherData>.last() = second
+fun Pair<WeatherData, Any?>.first() = first
+fun Pair<Any?, WeatherData>.last() = second
 
-fun Double.avrageFactor(high:Double,factor: Double):Double=this + (high - this).times(factor)
+fun Double.lerp(high: Double, factor: Double): Double = this + (high - this).times(factor)
 
 
-fun Int.avrageFactor(high:Int,factor: Double):Int{
-    return (this + (high - this).times(factor)).toInt()
+fun Int.lerp(high: Int, factor: Double): Int {
+    val out = (this + (high - this).times(factor)).toInt()
+    Log.d(TAG,"lerp int: high $high factor $factor this $this out $out")
+    return out
 }
 
-fun Long.avrageFactor(high: Long,factor: Double):Long{
-    return (this + (high - this).times(factor)).toLong()
+fun Long.lerp(high: Long, factor: Double): Long {
+    val out= (this + (high - this).times(factor)).toLong()
+    Log.d(TAG,"lerp long: high $high factor $factor this $this out $out")
+    return out
 }
 
-fun JSONArray.smhiValue(key:String): Number {
-    for (JsonObject in this){
+fun JSONArray.smhiValue(key: String): Number {
+    for (JsonObject in this) {
         try {
             if (JsonObject.getString("name") == key) {
                 return JsonObject.getJSONArray("values")[0] as Number //temp
@@ -398,30 +399,29 @@ fun JSONArray.smhiValue(key:String): Number {
 //            Log.d(TAG,found.toString())
 //            return found?.getJSONArray("values")?.get(0) as Number
 
-        }catch (j:JSONException){
+        } catch (j: JSONException) {
 //            Log.w(TAG,"smhiVal fail",j)
         }
     }
     throw NoSuchFieldException("no key $key")
 }
 
-operator fun JSONArray.iterator(): Iterator<JSONObject>
-        = (0 until length()).asSequence().map { get(it) as JSONObject }.iterator()
+operator fun JSONArray.iterator(): Iterator<JSONObject> = (0 until length()).asSequence().map { get(it) as JSONObject }.iterator()
 
-fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH,this)
+fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH, this)
 
-fun DestinationDao.getNextWrapAround(time: Long): Destination?{
+fun DestinationDao.getNextWrapAround(time: Long): Destination? {
     var out = getNext(time)
-    if(out==null){
-        out =getNext(0)
+    if (out == null) {
+        out = getNext(0)
     }
     return out
 
 }
 
-fun RouteStepDao.updateOrInsert(input:RouteStep){
-    var back = getFromLatLon(input.lat,input.lon)
-    if(back != null){
+fun RouteStepDao.updateOrInsert(input: RouteStep) {
+    var back = getFromLatLon(input.lat, input.lon)
+    if (back != null) {
         back
     }
 

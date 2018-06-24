@@ -29,8 +29,11 @@ interface WeatherDataDAO{
 //    @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 1800000 LIMIT 1")
 //    fun findByPlaceAndTime(lat:Double,lon:Double, timestamp: Long): WeatherData
 
-    @Query("SELECT * FROM weatherdata WHERE route_id = :routeId AND " + "abs( time - :timestamp )< 1800000 LIMIT 1")
-    fun getFromRoute(routeId: Int,timestamp:Long):WeatherData?
+    @Query("SELECT * FROM weatherdata WHERE route_id = :routeId AND " + " time > :timestamp ORDER BY time DESC LIMIT 1")
+    fun getNextFromRoute(routeId: Int,timestamp:Long):WeatherData?
+
+    @Query("SELECT * FROM weatherdata WHERE route_id = :routeId AND " + " time < :timestamp ORDER BY time ASC LIMIT 1")
+    fun getPrevFromRoute(routeId: Int,timestamp:Long):WeatherData?
 
     @Insert
     fun insertAll(vararg weather: WeatherData)
