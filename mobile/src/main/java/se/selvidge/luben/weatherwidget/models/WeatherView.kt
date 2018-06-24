@@ -8,7 +8,7 @@ import java.util.*
 
 data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Double){
     val wind:String
-        get() = "W: ${"%.2f".format(Locale.ENGLISH, weatherData.windSpeed)} m/s ${dir.values()[((weatherData.windDirection)/45)]} "
+        get() = "W: ${"%.1f".format(Locale.ENGLISH, weatherData.windSpeed)} m/s ${dir.values()[((weatherData.windDirection)/45)]} "
 
 
 //val wind:String
@@ -16,7 +16,12 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
 
 
     fun getPrettyToString(c: Context):String{
-        return "${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${getPlace(c).thoroughfare} T:${"%.2f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.2f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
+        val place = getPlace(c)
+        var name = place.subLocality
+        if(name == null){
+            name = place.thoroughfare
+        }
+        return "${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
     }
 
     fun getPlace(c: Context): Address {
@@ -27,4 +32,5 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
         N, NE, E, SE, S, SW, W, NW
     }
 }
+
 
