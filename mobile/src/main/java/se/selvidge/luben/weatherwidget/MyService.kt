@@ -85,7 +85,11 @@ class MyService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(AlarmReciver())
+        try {
+            unregisterReceiver(AlarmReciver())
+        } catch (e: Exception) {
+
+        }
     }
 
     override fun onCreate() {
@@ -233,7 +237,6 @@ class MyService : Service() {
                 )
 
 
-
 //                        Log.d(TAG,weatherData.toString())
                 val realWeatherData = weatherData
 //                            data += realWeatherData
@@ -273,7 +276,8 @@ class MyService : Service() {
 
         val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
         val c = Calendar.getInstance() // today
-//        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+
         c.set(Calendar.HOUR, 0)
         c.set(Calendar.MINUTE, 0)
         c.set(Calendar.SECOND, 0)
@@ -289,18 +293,28 @@ class MyService : Service() {
         //main view model population loop
 //        Log.d(TAG, "time until start $millistamp")
 //        Log.d(TAG, db.destinationDao().getAll().toString())
-        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
-//            Log.d(TAG, pair.toString())
 
-            db.routeStepDao().getAllFromDestination(pair.id!!).forEach {
+//        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
+//                destination.let { pair ->
+            db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
+            //            Log.d(TAG, pair.toString())
 
-                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
+            db.routeStepDao().getAllFromDestination(pair.first?.id!!).forEach {
+
+//                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
+                var time =  Date().time + (it.timeElapsed * 1000)
+                if(pair.second){//didWraparound
+                    Log.d(TAG,"did wraparound ${pair.first?.comuteStartIntervalStart!!} ${millistamp} ${c.timeInMillis} ")
+                    time = pair.first?.comuteStartIntervalStart!! + c.timeInMillis+86400000 + 36000000 + (it.timeElapsed * 1000)
+                }
+//                var now =  Date().time + (it.timeElapsed * 1000)
+//                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
                 db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                     db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
                         //                    Log.d(TAG,"pre create weatherview $it,$weather")
                         val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                         weather?.let { it1 ->
-//                            Log.d(TAG, "weather lerp done: $time \n $prevWeather \n $nextWeather \n $weather")
+                                                        Log.d(TAG, "weather  $it1")
                             viewModel += WeatherView(it1, it.lat, it.lon)
                         }
                     }
@@ -373,12 +387,13 @@ operator fun JSONArray.iterator(): Iterator<JSONObject> = (0 until length()).asS
 
 fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH, this)
 
-fun DestinationDao.getNextWrapAround(time: Long): Destination? {
+fun DestinationDao.getNextWrapAround(time: Long): Pair<Destination?,Boolean >{
     var out = getNext(time)
-    if (out == null) {
+    val wraparpound = out == null
+    if (wraparpound) {
         out = getNext(0)
     }
-    return out
+    return Pair(out,wraparpound)
 
 }
 
