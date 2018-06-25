@@ -34,3 +34,4 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
 }
 
 
+public data class WeatherDestination(val weatherDatas: List<WeatherView>,val destination: Destination)

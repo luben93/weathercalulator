@@ -83,17 +83,19 @@ class MyService : Service() {
 
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            unregisterReceiver(AlarmReciver())
-        } catch (e: Exception) {
-
-        }
-    }
+//    override fun onDestroy() {
+//
+// super.onDestroy()
+//        try {
+//            unregisterReceiver(AlarmReciver())
+//        } catch (e: Exception) {
+//
+//        }
+//    }
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "on create")
         val context = this
         db = AppDatabase.getDatabase(context)
 
@@ -134,7 +136,7 @@ class MyService : Service() {
                 .build()
         val response = client.newCall(request).execute()
         val out = response.body()?.string()
-//        Log.d(TAG, out)
+        Log.d(TAG, out)
         val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0
         var timeElapsed = 0
@@ -172,7 +174,7 @@ class MyService : Service() {
             var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude, currentLocation.longitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-//            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
+            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
             db.routeStepDao().insertAll(RouteStep(currentLocation.latitude, currentLocation.longitude, 1, destination.id!!))
             getRouteToDestination(destination)
 
@@ -186,7 +188,7 @@ class MyService : Service() {
     }
 
     fun doUpdate() {
-//        Log.d(TAG, "gonna update")
+        Log.d(TAG, "gonna update")
 
         doAsync {
             try {
@@ -209,7 +211,7 @@ class MyService : Service() {
     private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
-//        Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
+        Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
         var request = Request.Builder()
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
@@ -291,35 +293,15 @@ class MyService : Service() {
 
 
         //main view model population loop
-//        Log.d(TAG, "time until start $millistamp")
+        Log.d(TAG, "gonna parse next route")
 //        Log.d(TAG, db.destinationDao().getAll().toString())
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
             db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
             //            Log.d(TAG, pair.toString())
+                viewModel = getWeatherView(pair.first!!,pair.second,c.timeInMillis)
 
-            db.routeStepDao().getAllFromDestination(pair.first?.id!!).forEach {
-
-//                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-                var time =  Date().time + (it.timeElapsed * 1000)
-                if(pair.second){//didWraparound
-                    Log.d(TAG,"did wraparound ${pair.first?.comuteStartIntervalStart!!} ${millistamp} ${c.timeInMillis} ")
-                    time = pair.first?.comuteStartIntervalStart!! + c.timeInMillis+86400000 + 36000000 + (it.timeElapsed * 1000)
-                }
-//                var now =  Date().time + (it.timeElapsed * 1000)
-//                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
-                db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
-                    db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-                        //                    Log.d(TAG,"pre create weatherview $it,$weather")
-                        val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
-                        weather?.let { it1 ->
-                                                        Log.d(TAG, "weather  $it1")
-                            viewModel += WeatherView(it1, it.lat, it.lon)
-                        }
-                    }
-                }
-            }
         }
 
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
@@ -334,6 +316,36 @@ class MyService : Service() {
 //        return data
     }
 
+    fun returnListOfDestinations():List<Destination>{
+        return db.destinationDao().getAll()
+    }
+
+    fun getWeatherView(dest: Destination,wrappedAround:Boolean = false,timeOfDay:Long=Date().time):List<WeatherView>{
+        val pair = Pair(dest,wrappedAround)
+        var output = listOf<WeatherView>()
+        db.routeStepDao().getAllFromDestination(pair.first.id!!).forEach {
+
+            //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
+            var time =  Date().time + (it.timeElapsed * 1000)
+            if(pair.second){//didWraparound
+                Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
+                time = pair.first.comuteStartIntervalStart + timeOfDay +86400000 + 36000000 + (it.timeElapsed * 1000)
+            }
+//                var now =  Date().time + (it.timeElapsed * 1000)
+//                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
+            db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
+                db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
+                                        Log.d(TAG,"pre create weatherview $it,$nextWeather $prevWeather")
+                    val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
+                    weather.let { it1 ->
+                        //                        Log.d(TAG, "weather  $it1")
+                        output += WeatherView(it1, it.lat, it.lon)
+                    }
+                }
+            }
+        }
+        return output
+    }
 
 }
 
