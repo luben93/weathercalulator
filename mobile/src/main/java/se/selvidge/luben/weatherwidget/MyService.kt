@@ -329,7 +329,7 @@ class MyService : Service() {
             var time =  Date().time + (it.timeElapsed * 1000)
             if(pair.second){//didWraparound
                 Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = pair.first.comuteStartIntervalStart + timeOfDay +86400000 + 36000000 + (it.timeElapsed * 1000)
+                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) - 86400000
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)

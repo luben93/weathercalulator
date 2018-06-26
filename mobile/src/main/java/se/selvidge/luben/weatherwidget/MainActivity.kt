@@ -18,7 +18,10 @@ import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import org.jetbrains.anko.doAsync
+import se.selvidge.luben.weatherwidget.models.Destination
+import se.selvidge.luben.weatherwidget.models.WeatherData
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
+import se.selvidge.luben.weatherwidget.models.WeatherView
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -93,12 +96,13 @@ class MainActivity : AppCompatActivity() {
 
 
         Log.d(TAG, "app did resume")
-        var list = listOf<WeatherDestination>()
+        var list = listOf(WeatherDestination(listOf(WeatherView(WeatherData(0.0,0.0,0,0.0,0,0),0.0,0.0)), Destination(0.0,0.0,0.0,0.0,0,0)))
 
         val rView = findViewById<RecyclerView>(R.id.rView);
         val adapter = CustomAdapter(this@MainActivity, list)
         rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
         rView.adapter = adapter;
+
         doAsync {
             var list = listOf<WeatherDestination>()
             myService?.returnListOfDestinations()?.forEach { dest ->
