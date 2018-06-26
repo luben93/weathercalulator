@@ -18,16 +18,15 @@ import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import org.jetbrains.anko.doAsync
-import se.selvidge.luben.weatherwidget.models.Destination
-import se.selvidge.luben.weatherwidget.models.WeatherData
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
-import se.selvidge.luben.weatherwidget.models.WeatherView
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
     companion object {
         val YOUR_AWESOME_ACTION = "YourAwesomeAction"
         val VIEW_MODEL_UPDATED = "VIEW_MODEL_UPDATED"
     }
+    var list: ArrayList<WeatherDestination> = arrayListOf()//    var list = listOf(WeatherDestination(listOf(WeatherView(WeatherData(0.0,0.0,0,0.0,0,0),59.328446, 17.970361)), Destination(59.328446, 17.970361,0.0,0.0,0,0)))
 
     //    public final
     var TAG = "ACTIVITY"
@@ -43,6 +42,8 @@ class MainActivity : AppCompatActivity() {
             myService = binder.service
         }
     }
+
+    lateinit var adapter: CustomAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,33 +97,13 @@ class MainActivity : AppCompatActivity() {
 
 
         Log.d(TAG, "app did resume")
-        var list = listOf(WeatherDestination(listOf(WeatherView(WeatherData(0.0,0.0,0,0.0,0,0),0.0,0.0)), Destination(0.0,0.0,0.0,0.0,0,0)))
 
         val rView = findViewById<RecyclerView>(R.id.rView);
-        val adapter = CustomAdapter(this@MainActivity, list)
-        rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
+        adapter = CustomAdapter(this@MainActivity, list)
+        rView.layoutManager = GridLayoutManager(this@MainActivity, 2)
         rView.adapter = adapter;
 
-        doAsync {
-            var list = listOf<WeatherDestination>()
-            myService?.returnListOfDestinations()?.forEach { dest ->
-                myService?.getWeatherView(dest)?.let { list += WeatherDestination(it, dest) }
-            }.let {
-                runOnUiThread {
-                    Log.d(TAG,"$list")
-//                    val rView = findViewById<RecyclerView>(R.id.rView);
-                    val adapter = CustomAdapter(this@MainActivity, list)
-//                    rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
-                    rView.adapter = adapter;
-//                cardViewHolder.addView( CardView(this@MainActivity).apply {
-//                    addView( ImageView(this@MainActivity).apply { imageResource = R.drawable.cloud })
-//                    addView( TextView(this@MainActivity).apply { text = dest })
-//                    addView( TextView(this@MainActivity).apply { text = text })
 
-                }
-
-            }
-        }
     }
 
     override fun onPostResume() {
@@ -144,7 +125,7 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(contxt: Context?, intent: Intent?) {
             Log.d(TAG, "did recive")
             when (intent?.action) {
-                VIEW_MODEL_UPDATED -> UpdateView()
+                VIEW_MODEL_UPDATED -> updateCards()
                 YOUR_AWESOME_ACTION -> haha()
                 "haha" -> haha()
                 else -> haha()
@@ -173,8 +154,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        updateCards()
+    }
 
-
+    fun updateCards(){
+        doAsync {
+//            var list = listOf<WeatherDestination>()
+            myService?.returnListOfDestinations()?.forEach { dest ->
+                myService?.getWeatherView(dest)?.let {
+                    list.add(WeatherDestination(it, dest))
+                    runOnUiThread {
+                        Log.d(TAG, "$list")
+//                    val rView = findViewById<RecyclerView>(R.id.rView);
+//                    val adapter = CustomAdapter(this@MainActivity, list)
+//                    rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
+//                    rView.adapter = adapter;
+//                cardViewHolder.addView( CardView(this@MainActivity).apply {
+//                    addView( ImageView(this@MainActivity).apply { imageResource = R.drawable.cloud })
+//                    addView( TextView(this@MainActivity).apply { text = dest })
+//                    addView( TextView(this@MainActivity).apply { text = text })
+                        adapter.notifyItemChanged(list.size)
+                    }
+                }
+            }
+        }
 //        val widgetUpdateIntent = Intent(this, NewAppWidget.UpdateService::class.java)
 //        this.startService(widgetUpdateIntent)
 //        NewAppWidget.updateAppWidget(this,)
