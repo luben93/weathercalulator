@@ -110,7 +110,7 @@ class MyService : Service() {
         alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HALF_HOUR, alarmIntent)//todo verify that this runs
+                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
 
         LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
 //        registerReceiver(alarmed(), IntentFilter(syncAction))
@@ -329,7 +329,8 @@ class MyService : Service() {
             var time =  Date().time + (it.timeElapsed * 1000)
             if(pair.second){//didWraparound
                 Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) - 86400000
+                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) - 86400000 //todo -10h not working,
+                //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
