@@ -123,7 +123,7 @@ class MyService : Service() {
                 Log.d(TAG, "did boot")
                 onCreate()
             }
-        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo verify this
+        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
     }
 
     @SuppressLint("MissingPermission")//todo add permission question
