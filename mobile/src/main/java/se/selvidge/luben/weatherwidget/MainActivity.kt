@@ -96,11 +96,10 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-        Log.d(TAG, "app did resume")
 
         val rView = findViewById<RecyclerView>(R.id.rView);
         adapter = CustomAdapter(this@MainActivity, list)
-        rView.layoutManager = GridLayoutManager(this@MainActivity, 2)
+        rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
         rView.adapter = adapter;
 
 
@@ -108,6 +107,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPostResume() {
         super.onPostResume()
+        Log.d(TAG, "app did resume")
+
         myService?.doAsyncPushToView()
     }
 

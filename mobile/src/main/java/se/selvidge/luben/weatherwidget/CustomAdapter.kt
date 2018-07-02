@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import com.squareup.picasso.Picasso
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
 
 //import com.climesoft.designmaterial.R;
@@ -45,7 +46,8 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
         var album = list.get(position)
         holder.titleTextView.text = geo.getFromLocation(album.destination.lat,album.destination.lon,1).first().subLocality
         holder.countTextView.text = album.weatherDatas.fold("",{acc,data->acc+data.getPrettyToString(context)})
-        holder.thumbImageView.setImageResource(R.drawable.cloud);
+//        holder.thumbImageView.setImageResource(R.drawable.cloud);
+        Picasso.get().load("file:///android_asset/cloud.png").into(holder.thumbImageView)
 //        holder.overflowImageView.setOnClickListener(object : View.OnClickListener{
 //            override fun onClick(view: View) {
 //                showPopupMenu(holder.overflowImageView)

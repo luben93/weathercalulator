@@ -107,7 +107,7 @@ class MyService : Service() {
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-        alarmMgr.setInexactRepeating(
+        alarmMgr.setInexactRepeating(//todo only register once
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
                 AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
@@ -121,9 +121,27 @@ class MyService : Service() {
         this.registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(p0: Context?, p1: Intent?) {
                 Log.d(TAG, "did boot")
-                onCreate()
+                if (p0 != null) {
+                    postCreate(p0)
+                }
             }
         }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
+    }
+
+    fun postCreate(context: Context){
+        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
+            action = syncAction
+        }
+//        intentSync.setFlags(Intent.);
+        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
+
+        alarmMgr.setInexactRepeating(//todo only register once
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 100,
+                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
     }
 
     @SuppressLint("MissingPermission")//todo add permission question
@@ -326,10 +344,10 @@ class MyService : Service() {
         db.routeStepDao().getAllFromDestination(pair.first.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time =  Date().time + (it.timeElapsed * 1000)
+            var time =  Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
             if(pair.second){//didWraparound
                 Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) - 86400000 //todo -10h not working,
+                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
