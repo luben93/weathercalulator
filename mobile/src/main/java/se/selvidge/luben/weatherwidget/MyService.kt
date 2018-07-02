@@ -149,7 +149,7 @@ class MyService : Service() {
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
         val mode = "bicycling"
-        var request = Request.Builder()
+        var request = Request.Builder()//todo https://www.graphhopper.com/
                 .url("https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.latitude.toString() + "," + currentLocation.longitude}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
         val response = client.newCall(request).execute()
@@ -230,7 +230,7 @@ class MyService : Service() {
 
         val context = this
         Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
-        var request = Request.Builder()
+        var request = Request.Builder()//todo https://openweathermap.org/api
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
 //        Log.d(TAG,"weather requset url ${request.url()}")
