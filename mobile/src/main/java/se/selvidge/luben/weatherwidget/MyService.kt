@@ -85,7 +85,7 @@ class MyService : Service() {
 
 //    override fun onDestroy() {
 //
-// super.onDestroy()
+// super.onDestroy()//todo either unregister when done or create a background serivce
 //        try {
 //            unregisterReceiver(AlarmReciver())
 //        } catch (e: Exception) {

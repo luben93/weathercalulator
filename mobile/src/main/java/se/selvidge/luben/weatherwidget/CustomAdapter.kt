@@ -6,6 +6,7 @@ import android.location.Geocoder
 import android.support.v7.widget.CardView
 import android.support.v7.widget.PopupMenu
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -53,18 +54,22 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
 //                showPopupMenu(holder.overflowImageView)
 //            }
 //        });
-//        holder.overflowImageView.setOnClickListener{showPopupMenu(holder.overflowImageView)};
+        holder.thumbImageView.setOnClickListener{showPopupMenu(holder.thumbImageView)};
     }
     private fun showPopupMenu(view: View) {
         // inflate menu
         val popup = PopupMenu(context, view)
         val inflater = popup.getMenuInflater()
         inflater.inflate(R.menu.menu_main, popup.getMenu())
-        popup.setOnMenuItemClickListener(null)
+        popup.setOnMenuItemClickListener{
+            Log.d("ADAPTER","adapter $it $view")
+            true
+        }
         popup.show()
     }
     override fun getItemCount() : Int{
         return list.size;
     }
+
 
 }

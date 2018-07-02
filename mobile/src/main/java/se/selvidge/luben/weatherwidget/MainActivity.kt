@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
         val YOUR_AWESOME_ACTION = "YourAwesomeAction"
         val VIEW_MODEL_UPDATED = "VIEW_MODEL_UPDATED"
     }
+
     var list: ArrayList<WeatherDestination> = arrayListOf()//    var list = listOf(WeatherDestination(listOf(WeatherView(WeatherData(0.0,0.0,0,0.0,0,0),59.328446, 17.970361)), Destination(59.328446, 17.970361,0.0,0.0,0,0)))
 
     //    public final
@@ -96,7 +97,6 @@ class MainActivity : AppCompatActivity() {
         })
 
 
-
         val rView = findViewById<RecyclerView>(R.id.rView);
         adapter = CustomAdapter(this@MainActivity, list)
         rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
@@ -158,9 +158,9 @@ class MainActivity : AppCompatActivity() {
         updateCards()
     }
 
-    fun updateCards(){
+    fun updateCards() {
         doAsync {
-//            var list = listOf<WeatherDestination>()
+            //            var list = listOf<WeatherDestination>()
             myService?.returnListOfDestinations()?.forEach { dest ->
                 myService?.getWeatherView(dest)?.let {
                     list.add(WeatherDestination(it, dest))
@@ -195,8 +195,14 @@ class MainActivity : AppCompatActivity() {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+            R.id.action_settings -> {
+                Log.d(TAG, "settings")
+                true
+            }
+            else -> {
+                Log.d(TAG, "cardsettings")
+                true
+            }
         }
     }
 
