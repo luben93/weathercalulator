@@ -1,10 +1,17 @@
 package se.selvidge.luben.weatherwidget
 
+import android.annotation.SuppressLint
+import android.app.TimePickerDialog
 import android.content.*
+import android.location.Geocoder
+import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.v4.content.LocalBroadcastManager
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -16,8 +23,8 @@ import com.google.android.gms.location.places.Place
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_main.*
 import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.locationManager
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
 import java.util.*
 
@@ -41,11 +48,14 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
             val binder = p1 as MyService.LocalBinder
             myService = binder.service
+            myService?.doAsyncPushToView()
         }
     }
 
     lateinit var adapter: CustomAdapter
 
+    @SuppressLint("MissingPermission")
+    @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -53,6 +63,76 @@ class MainActivity : AppCompatActivity() {
 //        startService(Intent( this,MyService::class.java))//todo does this needs to be on, dont seem like it
 
         bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
+
+        add.setOnClickListener { view ->
+            Log.d(TAG,"gonna show picker")
+//            startActivity(Intent(this,popoverComuteSelector.javaClass))
+//            var display = getWindowManager().getDefaultDisplay();
+//            var size = Point();
+//            display.getSize(size);
+//
+//
+////            val doAlert = Dialog
+            var destPlace: Place?=null
+            var originPlace:Place?=null
+            var timeStart:Long=0
+//
+            var alert = AlertDialog.Builder(this@MainActivity)
+            val inflated = this.layoutInflater.inflate(R.layout.comute_selector,null)
+//            val popWindow = PopupWindow(inflated, size.x - 50,size.y - 500, true );
+//
+            val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
+            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
+            origin.setText(Geocoder(this).getFromLocation(currentLocation.latitude,currentLocation.longitude,1).first().thoroughfare)
+            val time = TimePickerDialog(this,{ view,hour,minute -> timeStart = (hour*60*60 + minute*60)*1000L},1,1,true)
+
+            dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+                override fun onPlaceSelected(place: Place) {
+                    Log.i(TAG, "dest: " + place.getName())
+                    destPlace = place
+
+                }
+                override fun onError(status: Status) { Log.i(TAG, "An error occurred: $status") }
+            })
+
+            origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+                override fun onPlaceSelected(place: Place) {
+                    Log.i(TAG, "origin: " + place.getName())
+                    originPlace =place
+                }
+                override fun onError(status: Status) { Log.i(TAG, "An error occurred: $status") }
+            })
+            alert.setView(inflated)
+            alert.setPositiveButton("Add"){dialogInterface, i ->
+//            popWindow.showAtLocation(inflated, Gravity.BOTTOM, 0,150);
+//
+                     myService?.addComuteDestination(destPlace!!, originPlace!!, Pair(timeStart, 36000000L))
+
+//                //todo add view setting for interval
+            }
+            alert.setNeutralButton("select time"){d,i->//removes underlying dialog :(
+                time.show()
+            }
+            val dialog = alert.create()
+
+
+//
+//            val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
+//            wds.start(object : WeekdaysDataSource.Callback{
+//                override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
+//                    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//                }
+//
+//                override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
+//
+//                }
+//            })
+//
+            dialog.show()
+//
+        }
+
 
         strava.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -81,20 +161,20 @@ class MainActivity : AppCompatActivity() {
 //        registerReceiver(this, IntentFilter())
 
 
-        val autocompleteFragment = fragmentManager.findFragmentById(R.id.place_autocomplete_fragment) as PlaceAutocompleteFragment
-
-        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-            //todo add permission question
-            override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "Place: " + place.getName())
-                myService?.addComuteDestination(place, Pair(21600000L, 36000000L))//todo add view setting for interval
-            }
-
-            override fun onError(status: Status) {
-                // TODO: Handle the error.
-                Log.i(TAG, "An error occurred: $status")
-            }
-        })
+//        val autocompleteFragment = fragmentManager.findFragmentById(R.id.place_autocomplete_fragment) as PlaceAutocompleteFragment
+//
+//        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+//            //todo add permission question
+//            override fun onPlaceSelected(place: Place) {
+//                Log.i(TAG, "Place: " + place.getName())
+//                myService?.addComuteDestination(place,null, Pair(21600000L, 36000000L))//todo add view setting for interval
+//            }
+//
+//            override fun onError(status: Status) {
+//                // TODO: Handle the error.
+//                Log.i(TAG, "An error occurred: $status")
+//            }
+//        })
 
 
         val rView = findViewById<RecyclerView>(R.id.rView);
@@ -137,7 +217,7 @@ class MainActivity : AppCompatActivity() {
 
     fun haha() {
         Log.d(TAG, "haha haha")
-        mainTextView.text = myService?.data
+//        mainTextView.text = myService?.data
     }
 
     fun UpdateView() {
@@ -146,7 +226,7 @@ class MainActivity : AppCompatActivity() {
             myService?.viewModel?.forEach {
                 data += it.getPrettyToString(this)
             }
-            mainTextView.text = data
+//            mainTextView.text = data
 //            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + MyService.Companion.halfHourInMs)}")
         } catch (e: Exception) {
             Log.w(TAG, "printintg data", e)
@@ -159,6 +239,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun updateCards() {
+        list.clear()
         doAsync {
             //            var list = listOf<WeatherDestination>()
             myService?.returnListOfDestinations()?.forEach { dest ->
@@ -174,7 +255,8 @@ class MainActivity : AppCompatActivity() {
 //                    addView( ImageView(this@MainActivity).apply { imageResource = R.drawable.cloud })
 //                    addView( TextView(this@MainActivity).apply { text = dest })
 //                    addView( TextView(this@MainActivity).apply { text = text })
-                        adapter.notifyItemChanged(list.size)
+//                        adapter.notifyItemChanged(list.size)// todo does not work
+                        adapter.notifyDataSetChanged()
                     }
                 }
             }

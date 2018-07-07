@@ -45,7 +45,7 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
     }
     override fun onBindViewHolder(holder : CustomAdapter.ViewHolder, position : Int){
         var album = list.get(position)
-        holder.titleTextView.text = geo.getFromLocation(album.destination.lat,album.destination.lon,1).first().subLocality
+        holder.titleTextView.text = geo.getFromLocation(album.destination.lat,album.destination.lon,1).first().thoroughfare
         holder.countTextView.text = album.weatherDatas.fold("",{acc,data->acc+data.getPrettyToString(context)})
 //        holder.thumbImageView.setImageResource(R.drawable.cloud);
         Picasso.get().load("file:///android_asset/cloud.png").into(holder.thumbImageView)

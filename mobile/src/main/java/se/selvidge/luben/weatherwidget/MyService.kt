@@ -128,7 +128,7 @@ class MyService : Service() {
         }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
     }
 
-    fun postCreate(context: Context){
+    fun postCreate(context: Context) {
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         var intentSync = Intent(applicationContext, alarmed::class.java).apply {
             action = syncAction
@@ -185,15 +185,15 @@ class MyService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    fun addComuteDestination(place: Place, interval: Pair<Long, Long>) {
+    fun addComuteDestination(dest: Place,currentLocation: Place, interval: Pair<Long, Long>) {
         doAsync {
-            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+//            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
-            var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude, currentLocation.longitude, interval.first, interval.second)
+            var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.latitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(currentLocation.latitude, currentLocation.longitude, 1, destination.id!!))
+            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
+            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.latitude, 1, destination.id!!))
             getRouteToDestination(destination)
 
         }
@@ -229,7 +229,7 @@ class MyService : Service() {
     private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
-        Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
+        Log.d(TAG, "starting weather fetch ${step.lat} ${step.lon}")
         var request = Request.Builder()//todo https://openweathermap.org/api
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
@@ -316,9 +316,9 @@ class MyService : Service() {
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
-            db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
+        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
             //            Log.d(TAG, pair.toString())
-                viewModel = getWeatherView(pair.first!!,pair.second,c.timeInMillis)
+            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
 
         }
 
@@ -334,27 +334,27 @@ class MyService : Service() {
 //        return data
     }
 
-    fun returnListOfDestinations():List<Destination>{
+    fun returnListOfDestinations(): List<Destination> {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination,wrappedAround:Boolean = false,timeOfDay:Long=Date().time):List<WeatherView>{
-        val pair = Pair(dest,wrappedAround)
+    fun getWeatherView(dest: Destination, wrappedAround: Boolean = false, timeOfDay: Long = Date().time): List<WeatherView> {
+        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(pair.first.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time =  Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
-            if(pair.second){//didWraparound
-                Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
+            var time = Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
+            if (pair.second) {//didWraparound
+                Log.d(TAG, "did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
+                time = (pair.first.comuteStartIntervalStart + timeOfDay + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-                                        Log.d(TAG,"pre create weatherview $it,$nextWeather $prevWeather")
+                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
                         //                        Log.d(TAG, "weather  $it1")
@@ -418,13 +418,13 @@ operator fun JSONArray.iterator(): Iterator<JSONObject> = (0 until length()).asS
 
 fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH, this)
 
-fun DestinationDao.getNextWrapAround(time: Long): Pair<Destination?,Boolean >{
+fun DestinationDao.getNextWrapAround(time: Long): Pair<Destination?, Boolean> {
     var out = getNext(time)
     val wraparpound = out == null
     if (wraparpound) {
         out = getNext(0)
     }
-    return Pair(out,wraparpound)
+    return Pair(out, wraparpound)
 
 }
 

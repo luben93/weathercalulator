@@ -51,6 +51,8 @@
 
         <receiver android:name=".MyService$AlarmReciver"/>
 
+        <activity android:name=".popoverComuteSelector"></activity>
+
         <service
             android:name=".MyService"
             android:enabled="true"
