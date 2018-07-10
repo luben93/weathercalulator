@@ -8,7 +8,6 @@ import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
 import android.location.Geocoder
-import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
 import android.os.SystemClock
@@ -19,7 +18,6 @@ import com.google.android.gms.location.places.Place
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
-import org.jetbrains.anko.locationManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -40,14 +38,13 @@ class MyService : Service() {
             Log.d(TAG, "from static call")
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
-
         var widget: NewAppWidget? = null
         val syncAction = "syncAction"
         val halfHourInMs = 1800000
         val TAG = "SERVICE"
         var now: Long = 0
             get() = Date().time
-
+        var myself:MyService?=null
 //        var data = "not updated yet"
     }
 
@@ -96,6 +93,7 @@ class MyService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "on create")
+        myself = this
         val context = this
         db = AppDatabase.getDatabase(context)
 
@@ -144,17 +142,26 @@ class MyService : Service() {
         LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
     }
 
+    fun removeDestination(id:Destination){
+        doAsync {
+            db.destinationDao().delete(id)
+            Log.d(TAG,"${db.destinationDao().getAll()} \n" +
+                    " ${db.routeStepDao()} \n" +
+                    " ${db.weatherDao()}")
+        }
+    }
+
     @SuppressLint("MissingPermission")//todo add permission question
     internal fun getRouteToDestination(dest: Destination) {
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+//        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
         val mode = "bicycling"
         var request = Request.Builder()//todo https://www.graphhopper.com/
-                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.latitude.toString() + "," + currentLocation.longitude}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
+                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${dest.fromLat.toString() + "," + dest.fromLon}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
         val response = client.newCall(request).execute()
         val out = response.body()?.string()
-        Log.d(TAG, out)
+//        Log.d(TAG, out)
         val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0
         var timeElapsed = 0
@@ -188,16 +195,18 @@ class MyService : Service() {
     fun addComuteDestination(dest: Place,currentLocation: Place, interval: Pair<Long, Long>) {
         doAsync {
 //            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-
-            var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.latitude, interval.first, interval.second)
+Log.d(TAG,"$dest $currentLocation")
+            var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.longitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
             Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.latitude, 1, destination.id!!))
+            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.longitude, 1, destination.id!!))
             getRouteToDestination(destination)
 
         }
     }
+
+
 
     fun doAsyncPushToView() {
         doAsync {
@@ -229,7 +238,7 @@ class MyService : Service() {
     private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
-        Log.d(TAG, "starting weather fetch ${step.lat} ${step.lon}")
+//        Log.d(TAG, "starting weather fetch ${step.lat} ${step.lon}")
         var request = Request.Builder()//todo https://openweathermap.org/api
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
@@ -345,7 +354,7 @@ class MyService : Service() {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
             var time = Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
-            if (pair.second) {//didWraparound
+            if (pair.second) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
                 time = (pair.first.comuteStartIntervalStart + timeOfDay + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
                 //todo add weekend support

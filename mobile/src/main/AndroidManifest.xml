@@ -51,7 +51,11 @@
 
         <receiver android:name=".MyService$AlarmReciver"/>
 
-        <activity android:name=".popoverComuteSelector"></activity>
+        <activity android:name=".PopoverComuteSelector">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".MyService"

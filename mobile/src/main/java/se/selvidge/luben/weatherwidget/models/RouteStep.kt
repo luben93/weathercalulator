@@ -2,7 +2,7 @@ package se.selvidge.luben.weatherwidget.models
 
 import android.arch.persistence.room.*
 
-@Entity(foreignKeys = arrayOf(ForeignKey(entity = Destination::class,parentColumns = ["id"], childColumns = ["destinationId"])))
+@Entity(foreignKeys = arrayOf(ForeignKey(entity = Destination::class,parentColumns = ["id"], childColumns = ["destinationId"],onDelete = ForeignKey.CASCADE)))
 data class RouteStep (
 
         var lat:Double,
