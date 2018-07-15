@@ -8,6 +8,7 @@ import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
 import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
 import android.os.SystemClock
@@ -18,6 +19,7 @@ import com.google.android.gms.location.places.Place
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.locationManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -159,7 +161,7 @@ class MyService : IntentService("myService") {
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-        alarmMgr.setInexactRepeating(//todo only register once
+        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
                 60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
@@ -240,11 +242,7 @@ class MyService : IntentService("myService") {
     }
 
 
-    fun doAsyncPushToView() {
-        doAsync {
-            updateViews()
-        }
-    }
+
 
     fun doUpdate() {
         Log.d(TAG, "gonna update")
@@ -324,6 +322,7 @@ class MyService : IntentService("myService") {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun updateViews() {
 
         //widget
@@ -331,7 +330,7 @@ class MyService : IntentService("myService") {
                 .applicationContext)
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
-
+        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         viewModel = listOf()
 
         val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
@@ -361,6 +360,8 @@ class MyService : IntentService("myService") {
             viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
 
         }
+
+        db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap
 
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
             val out = acc + row.getPrettyToString(this@MyService)

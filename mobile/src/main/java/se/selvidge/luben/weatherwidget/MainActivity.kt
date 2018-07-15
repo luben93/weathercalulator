@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity() {
                 MyService.getWeatherView(dest,this@MainActivity)?.let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
-                        Log.d(TAG, "$list")
+//                        Log.d(TAG, "$list")
 //                    val rView = findViewById<RecyclerView>(R.id.rView);
 //                    val adapter = CustomAdapter(this@MainActivity, list)
 //                    rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
