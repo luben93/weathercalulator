@@ -78,27 +78,31 @@ class MyService : IntentService("myService") {
         return mBinder
     }
 
+//    var reciverRegister = false
     var receiver = object : BroadcastReceiver() {
         override fun onReceive(broadcastContext: Context, broadcastIntent: Intent) {
 //    override fun onHandleIntent(broadcastIntent: Intent) {
 //        val broadcastContext = this
+            Log.d(TAG,"broadcastContext = [${broadcastContext}], broadcastIntent = [${broadcastIntent}]")
         broadcastContext.startService(broadcastIntent)
 //            doUpdate()
         }
 
     }
 
-    override fun onDestroy() {
+//    override fun onDestroy() {
+////
+//        super.onDestroy()//todo either unregister when done or create a background serivce
+//        try{
+//            unregisterReceiver(receiver);
+////            reciverRegister =false
+//        }catch(e:IllegalArgumentException){
 //
-        super.onDestroy()//todo either unregister when done or create a background serivce
-//        if (receiver != null) {
-//        unregisterReceiver(receiver);
-//            receiver = null;
-
-    }
+//        }
+//    }
 
     override fun onHandleIntent(p0: Intent) {
-        Log.d(TAG, "------------------------local-----------------------\nbrodcast inner class , $p0")
+        Log.d(TAG, "------------------------local-----------------------\nhandle intent, $p0")
         when (p0.action) {
             syncAction -> myself?.doUpdate()
             updateViewAction -> myself?.updateViews()
@@ -126,15 +130,13 @@ class MyService : IntentService("myService") {
 //                SystemClock.elapsedRealtime() + 100,
 //                60000, alarmIntent)//todo verify that this runs
 //
-        LocalBroadcastManager.getInstance(this).registerReceiver(object : BroadcastReceiver(){
-            override fun onReceive(p0: Context?, p1: Intent?) {
-                Log.d(TAG,"did boot")
-            }
-        }, IntentFilter().apply {
-//            addAction(syncAction)
-//            addAction(updateViewAction)
+        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
+            addAction(syncAction)
+            addAction(updateViewAction)
             addAction(Intent.ACTION_BOOT_COMPLETED)
         })
+//        reciverRegister = true
+
 //        registerReceiver(alarmed(), IntentFilter(syncAction))
 
 //        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
@@ -152,9 +154,7 @@ class MyService : IntentService("myService") {
 //
 //    fun postCreate(context: Context) {
 //        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
-            action = syncAction
-        }
+        var intentSync = Intent(applicationContext, alarmed::class.java)
 
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
@@ -162,11 +162,11 @@ class MyService : IntentService("myService") {
         alarmMgr.setInexactRepeating(//todo only register once
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
-                60000, PendingIntent.getBroadcast(applicationContext, 0, Intent(updateViewAction), 0))//todo verify that this runs
+                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
         alarmMgr.setInexactRepeating(//todo only register once
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 0, Intent(syncAction), 0))//todo verify that this runs
+                AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = syncAction }, 0))//todo verify that this runs
 
 
         db = AppDatabase.getDatabase(context)

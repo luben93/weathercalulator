@@ -7,9 +7,9 @@ import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 
 class alarmed: BroadcastReceiver() {
-    override fun onReceive(p0: Context?, p1: Intent?) {
+    override fun onReceive(p0: Context, p1: Intent) {
         Log.d("alarmed","$p0 $p1")
-        LocalBroadcastManager.getInstance(p0!!).sendBroadcast(Intent(p0,MyService::class.java).apply { action = MyService.syncAction })
+        LocalBroadcastManager.getInstance(p0).sendBroadcast(Intent(p0,MyService::class.java).apply { action = p1.action })
     }
 
 }
