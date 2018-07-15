@@ -2,8 +2,8 @@ package se.selvidge.luben.weatherwidget
 
 import android.annotation.SuppressLint
 import android.app.AlarmManager
+import android.app.IntentService
 import android.app.PendingIntent
-import android.app.Service
 import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class MyService : Service() {
+class MyService : IntentService("myService") {
     //todone add alarm manager to update weather
     //todone listen after intents and react aproriatly, widget button etc
     //maybe use Machine learning to train weather -> clothes model
@@ -38,13 +38,21 @@ class MyService : Service() {
             Log.d(TAG, "from static call")
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
+
+        fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
+            val me = MyService()
+            me.db = AppDatabase.getDatabase(context)
+            return me.getWeatherView(dest)
+
+        }
         var widget: NewAppWidget? = null
-        val syncAction = "syncAction"
+        val syncAction = "NETWORK_SYNC"
+        val updateViewAction = "VIEW_UPDATE"
         val halfHourInMs = 1800000
         val TAG = "SERVICE"
         var now: Long = 0
             get() = Date().time
-        var myself:MyService?=null
+        var myself: MyService? = null
 //        var data = "not updated yet"
     }
 
@@ -70,82 +78,106 @@ class MyService : Service() {
         return mBinder
     }
 
-    inner class AlarmReciver() : BroadcastReceiver() {
-
-        override fun onReceive(p0: Context?, p1: Intent?) {
-            Log.d(TAG, "------------------------local-----------------------\nbrodcast inner class $p0, $p1")
-
-            doUpdate()
+    var receiver = object : BroadcastReceiver() {
+        override fun onReceive(broadcastContext: Context, broadcastIntent: Intent) {
+//    override fun onHandleIntent(broadcastIntent: Intent) {
+//        val broadcastContext = this
+        broadcastContext.startService(broadcastIntent)
+//            doUpdate()
         }
 
     }
 
-//    override fun onDestroy() {
+    override fun onDestroy() {
 //
-// super.onDestroy()//todo either unregister when done or create a background serivce
-//        try {
-//            unregisterReceiver(AlarmReciver())
-//        } catch (e: Exception) {
-//
-//        }
-//    }
+        super.onDestroy()//todo either unregister when done or create a background serivce
+//        if (receiver != null) {
+//        unregisterReceiver(receiver);
+//            receiver = null;
+
+    }
+
+    override fun onHandleIntent(p0: Intent) {
+        Log.d(TAG, "------------------------local-----------------------\nbrodcast inner class , $p0")
+        when (p0.action) {
+            syncAction -> myself?.doUpdate()
+            updateViewAction -> myself?.updateViews()
+            Intent.ACTION_BOOT_COMPLETED -> Log.d(TAG,"did boot")
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "on create")
         myself = this
         val context = this
-        db = AppDatabase.getDatabase(context)
+//        db = AppDatabase.getDatabase(context)
 
 
         val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
-            action = syncAction
-        }
+//        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
+//            action = syncAction
+//        }
 //        intentSync.setFlags(Intent.);
-        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
+//        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-        alarmMgr.setInexactRepeating(//todo only register once
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
+//        alarmMgr.setInexactRepeating(//todo only register once
+//                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+//                SystemClock.elapsedRealtime() + 100,
+//                60000, alarmIntent)//todo verify that this runs
+//
+        LocalBroadcastManager.getInstance(this).registerReceiver(object : BroadcastReceiver(){
+            override fun onReceive(p0: Context?, p1: Intent?) {
+                Log.d(TAG,"did boot")
+            }
+        }, IntentFilter().apply {
+//            addAction(syncAction)
+//            addAction(updateViewAction)
+            addAction(Intent.ACTION_BOOT_COMPLETED)
+        })
 //        registerReceiver(alarmed(), IntentFilter(syncAction))
 
 //        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
 
-
-        this.registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(p0: Context?, p1: Intent?) {
-                Log.d(TAG, "did boot")
-                if (p0 != null) {
-                    postCreate(p0)
-                }
-            }
-        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
-    }
-
-    fun postCreate(context: Context) {
-        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+//        postCreate(this)
+//        this.registerReceiver(object : BroadcastReceiver() {
+//            override fun onReceive(p0: Context?, p1: Intent?) {
+//                Log.d(TAG, "did boot")
+//                if (p0 != null) {
+//                    postCreate(p0)
+//                }
+//            }
+//        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
+//    }
+//
+//    fun postCreate(context: Context) {
+//        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         var intentSync = Intent(applicationContext, alarmed::class.java).apply {
             action = syncAction
         }
+
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
         alarmMgr.setInexactRepeating(//todo only register once
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
+                60000, PendingIntent.getBroadcast(applicationContext, 0, Intent(updateViewAction), 0))//todo verify that this runs
+        alarmMgr.setInexactRepeating(//todo only register once
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 100,
+                AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 0, Intent(syncAction), 0))//todo verify that this runs
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
+
+        db = AppDatabase.getDatabase(context)
+
+//        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter(syncAction))
     }
 
-    fun removeDestination(id:Destination){
+    fun removeDestination(id: Destination) {
         doAsync {
             db.destinationDao().delete(id)
-            Log.d(TAG,"${db.destinationDao().getAll()} \n" +
+            Log.d(TAG, "${db.destinationDao().getAll()} \n" +
                     " ${db.routeStepDao()} \n" +
                     " ${db.weatherDao()}")
         }
@@ -192,20 +224,20 @@ class MyService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    fun addComuteDestination(dest: Place,currentLocation: Place, interval: Pair<Long, Long>) {
+    fun addComuteDestination(dest: Place, currentLocation: Place, interval: Pair<Long, Long>) {
         doAsync {
-//            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-Log.d(TAG,"$dest $currentLocation")
+            //            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            Log.d(TAG, "$dest $currentLocation")
             var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.longitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
             Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.longitude, 1, destination.id!!))
+            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.longitude, 1, destination.id!!))//also ugly
+            db.routeStepDao().insertAll(RouteStep(dest.latLng.latitude, dest.latLng.longitude, 1, destination.id!!))//ugly
             getRouteToDestination(destination)
 
         }
     }
-
 
 
     fun doAsyncPushToView() {
@@ -219,7 +251,6 @@ Log.d(TAG,"$dest $currentLocation")
 
         doAsync {
             try {
-                val geo = Geocoder(this@MyService)
 //                data = ""
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }

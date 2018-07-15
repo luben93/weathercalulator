@@ -3,11 +3,13 @@ package se.selvidge.luben.weatherwidget
 import android.annotation.SuppressLint
 import android.app.FragmentManager
 import android.app.TimePickerDialog
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.IBinder
 import android.support.design.widget.Snackbar
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.app.AlertDialog
@@ -24,6 +26,9 @@ import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.locationManager
+import se.selvidge.luben.weatherwidget.models.AppDatabase
+import se.selvidge.luben.weatherwidget.models.Destination
+import se.selvidge.luben.weatherwidget.models.RouteStep
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
 import java.util.*
 
@@ -38,18 +43,18 @@ class MainActivity : AppCompatActivity() {
     //    public final
     var TAG = "ACTIVITY"
     //TODO add options to select places for weather, kinda of done
-    var myService: MyService? = null
-    var myServiceConnecetion = object : ServiceConnection {
-        override fun onServiceDisconnected(p0: ComponentName?) {
-            myService = null
-        }
-
-        override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-            val binder = p1 as MyService.LocalBinder
-            myService = binder.service
-            myService?.doAsyncPushToView()
-        }
-    }
+//    var myService: MyService? = null
+//    var myServiceConnecetion = object : ServiceConnection {
+//        override fun onServiceDisconnected(p0: ComponentName?) {
+//            myService = null
+//        }
+//
+//        override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
+//            val binder = p1 as MyService.LocalBinder
+//            myService = binder.service
+//            myService?.doAsyncPushToView()
+//        }
+//    }
     lateinit var myFragmentManager: FragmentManager
     lateinit var adapter: CustomAdapter
 
@@ -59,9 +64,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-//        startService(Intent( this,MyService::class.java))//todo does this needs to be on, dont seem like it
+        startService(Intent( this,MyService::class.java))//todo does this needs to be on, dont seem like it
 
-        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
+//        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
      myFragmentManager = getFragmentManager()
 
     add.setOnClickListener { view ->
@@ -94,7 +99,9 @@ class MainActivity : AppCompatActivity() {
 
 
         debug.setOnClickListener { view ->
-            myService?.doAsyncPushToView()
+//            myService?.doAsyncPushToView()
+            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
+
         }
         LocalBroadcastManager.getInstance(this)
                 .registerReceiver(broadCastReceiver, IntentFilter().apply {
@@ -136,8 +143,8 @@ class MainActivity : AppCompatActivity() {
 //
 //
 ////            val doAlert = Dialog
-        var destPlace: Place?=null
-        var originPlace:Place?=null
+        lateinit var destPlace: Place
+        lateinit var originPlace:Place
         var timeStart:Long=0
 //
         var alert = AlertDialog.Builder(this@MainActivity)
@@ -169,8 +176,14 @@ class MainActivity : AppCompatActivity() {
         alert.setView(inflated)
         alert.setPositiveButton("Add"){dialogInterface, i ->
             //            popWindow.showAtLocation(inflated, Gravity.BOTTOM, 0,150);
-//
-            myService?.addComuteDestination(destPlace!!, originPlace!!, Pair(timeStart, 36000000L))
+
+            val db = AppDatabase.getDatabase(this@MainActivity)
+//            myService?.addComuteDestination(destPlace!!, originPlace!!, Pair(timeStart, 36000000L))
+            var destination = Destination(destPlace.latLng.latitude, destPlace.latLng.longitude, originPlace.latLng.latitude, originPlace.latLng.longitude, timeStart, 36000000L)
+            val id = db.destinationDao().insert(destination)
+            destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
+            db.routeStepDao().insertAll(RouteStep(originPlace.latLng.latitude, originPlace.latLng.longitude, 1, destination.id!!))//also ugly
+            db.routeStepDao().insertAll(RouteStep(destPlace.latLng.latitude, destPlace.latLng.longitude, 1, destination.id!!))//ugly
 
 //                //todo add view setting for interval
         }
@@ -198,8 +211,9 @@ class MainActivity : AppCompatActivity() {
     override fun onPostResume() {
         super.onPostResume()
         Log.d(TAG, "app did resume")
+        startService(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
 
-        myService?.doAsyncPushToView()
+//        myService?.doAsyncPushToView()
     }
 
     override fun onDestroy() {
@@ -209,7 +223,7 @@ class MainActivity : AppCompatActivity() {
         } catch (re: RuntimeException) {
 
         }
-        unbindService(myServiceConnecetion)
+//        unbindService(myServiceConnecetion)
     }
 
     val broadCastReceiver = object : BroadcastReceiver() {
@@ -233,9 +247,9 @@ class MainActivity : AppCompatActivity() {
     fun UpdateView() {
         try {
             var data = "next up\n"
-            myService?.viewModel?.forEach {
-                data += it.getPrettyToString(this)
-            }
+//            myService?.viewModel?.forEach {
+//                data += it.getPrettyToString(this)
+//            }
 //            mainTextView.text = data
 //            Log.d(TAG, "${Date(Date().time - halfHourInMs)}   ${java.util.Date(java.util.Date().time + MyService.Companion.halfHourInMs)}")
         } catch (e: Exception) {
@@ -252,8 +266,9 @@ class MainActivity : AppCompatActivity() {
         list.clear()
         doAsync {
             //            var list = listOf<WeatherDestination>()
-            myService?.returnListOfDestinations()?.forEach { dest ->
-                myService?.getWeatherView(dest)?.let {
+
+            AppDatabase.getDatabase(this@MainActivity).destinationDao().getAll().forEach { dest ->
+                MyService.getWeatherView(dest,this@MainActivity)?.let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
                         Log.d(TAG, "$list")
