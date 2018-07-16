@@ -92,16 +92,17 @@ class MyService : IntentService("myService") {
 
     }
 
-//    override fun onDestroy() {
+    override fun onDestroy() {
 ////
-//        super.onDestroy()//todo either unregister when done or create a background serivce
-//        try{
-//            unregisterReceiver(receiver);
+        super.onDestroy()//todo either unregister when done or create a background serivce
+        try{
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+//            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);
 ////            reciverRegister =false
-//        }catch(e:IllegalArgumentException){
+        }catch(e:IllegalArgumentException){
 //
-//        }
-//    }
+        }
+    }
 
     override fun onHandleIntent(p0: Intent) {
         Log.d(TAG, "------------------------local-----------------------\nhandle intent, $p0")
@@ -161,10 +162,10 @@ class MyService : IntentService("myService") {
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
+//        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
+//                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+//                SystemClock.elapsedRealtime() + 100,
+//                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
         alarmMgr.setInexactRepeating(//todo only register once
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
@@ -355,14 +356,18 @@ class MyService : IntentService("myService") {
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
-        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
+        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap
+        val next = db.destinationDao().getNextWrapAround(millistamp)
+
+//        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
             //            Log.d(TAG, pair.toString())
+        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
+        val pair = Pair(closest,launchtime<Date().time)
             viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
 
-        }
+//        }
 
-        db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap
-
+        Log.d(TAG,"close $closest \nnext $next")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
             val out = acc + row.getPrettyToString(this@MyService)
             out
@@ -395,7 +400,7 @@ class MyService : IntentService("myService") {
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather")
+//                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
                         //                        Log.d(TAG, "weather  $it1")

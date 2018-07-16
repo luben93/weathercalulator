@@ -30,7 +30,7 @@ interface DestinationDao{
     fun getNext(time: Long): Destination?
 
 
-    @Query("SELECT * AS distance FROM items ORDER BY ABS(fromLat - :lat) + ABS(fromLon - :lng) ASC LIMIT 1")
+    @Query("SELECT *  FROM destination ORDER BY ABS(fromLat - :lat) + ABS(fromLon - :lng) ASC LIMIT 1")
     fun getClosetsOrigin(lat :Double,lng :Double):Destination?
 
     @Insert
