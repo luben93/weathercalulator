@@ -88,10 +88,12 @@ class MyService : IntentService("myService") {
         super.onDestroy()//todo either unregister when done or create a background serivce, maybe solved
         try{
             LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+            unregisterReceiver(receiver)
+
 //            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);
 ////            reciverRegister =false
         }catch(e:IllegalArgumentException){
-//
+            e.printStackTrace()
         }
     }
 
@@ -382,11 +384,17 @@ class MyService : IntentService("myService") {
         EpochToZeroZero.set(Calendar.MINUTE, 0)
         EpochToZeroZero.set(Calendar.SECOND, 0)
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
+        val todayZeroZero = Calendar.getInstance() // today
+        todayZeroZero.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+
+        todayZeroZero.set(Calendar.DAY_OF_MONTH, 0)
+        todayZeroZero.set(Calendar.MONTH, 0)
+        todayZeroZero.set(Calendar.YEAR, 0)
 //        Log.d(TAG,db.weatherDao().getAll().toString())
-        val timeSinceZeroZero = Date().time - EpochToZeroZero.timeInMillis
+        val timeSinceZeroZero = todayZeroZero.timeInMillis
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
         val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero
-        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
+        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)//todo timezone is fishy
 
 //        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
