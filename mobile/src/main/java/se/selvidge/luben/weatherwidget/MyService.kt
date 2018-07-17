@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
-import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
@@ -41,10 +40,10 @@ class MyService : IntentService("myService") {
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
 
-        fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
+        fun getWeatherView(dest: Destination,context: Context,wrapAround: Boolean):List<WeatherView>{
             val me = MyService()
             me.db = AppDatabase.getDatabase(context)
-            return me.getWeatherView(dest)
+            return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
 
         }
         var widget: NewAppWidget? = null
@@ -333,16 +332,16 @@ class MyService : IntentService("myService") {
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         viewModel = listOf()
 
-        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
-        val c = Calendar.getInstance() // today
-        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
-
-        c.set(Calendar.HOUR, 0)
-        c.set(Calendar.MINUTE, 0)
-        c.set(Calendar.SECOND, 0)
-        c.set(Calendar.MILLISECOND, 0)
-//        Log.d(TAG,db.weatherDao().getAll().toString())
-        val millistamp = Date().time - c.timeInMillis
+//        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
+//        val c = Calendar.getInstance() // today
+//        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+//
+//        c.set(Calendar.HOUR, 0)
+//        c.set(Calendar.MINUTE, 0)
+//        c.set(Calendar.SECOND, 0)
+//        c.set(Calendar.MILLISECOND, 0)
+////        Log.d(TAG,db.weatherDao().getAll().toString())
+//        val millistamp = Date().time - c.timeInMillis
         //setup done
 
 
@@ -355,18 +354,18 @@ class MyService : IntentService("myService") {
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
-        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap, closest seems to be working
-        val next = db.destinationDao().getNextWrapAround(millistamp)
+        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
+//        val next = db.destinationDao().getNextWrapAround(millistamp)
 
 //        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
             //            Log.d(TAG, pair.toString())
-        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
-        val pair = Pair(closest,launchtime<Date().time)
-            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
-
+//        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
+//        val pair = Pair(closest,launchtime<Date().time)
+//            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
+        viewModel = getWeatherView(closest)
 //        }
 
-        Log.d(TAG,"close $closest \nnext $next")
+        Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
             val out = acc + row.getPrettyToString(this@MyService)
             out
@@ -383,16 +382,29 @@ class MyService : IntentService("myService") {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination, wrappedAround: Boolean = false, timeOfDay: Long = Date().time): List<WeatherView> {
-        val pair = Pair(dest, wrappedAround)
+    fun getWeatherView(dest: Destination): List<WeatherView> {
+        val c = Calendar.getInstance() // today
+        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+
+        c.set(Calendar.HOUR, 0)
+        c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0)
+        c.set(Calendar.MILLISECOND, 0)
+//        Log.d(TAG,db.weatherDao().getAll().toString())
+        val millistamp = Date().time - c.timeInMillis
+        val launchtime = dest!!.comuteStartIntervalStart + c.timeInMillis
+        val wrappedAround = launchtime<Date().time
+
+
+//        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
-        db.routeStepDao().getAllFromDestination(pair.first.id!!).forEach {
+        db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
-            if (pair.second) {//didWraparound //todo this is horribly broken
-                Log.d(TAG, "did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay + 36000000 + (it.timeElapsed * 1000))
+            var time = launchtime +millistamp+ (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
+            if (wrappedAround) {//didWraparound //todo this is horribly broken
+                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
+                time = ( dest.comuteStartIntervalStart + launchtime + 36000000 + (it.timeElapsed * 1000))
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
