@@ -94,7 +94,7 @@ class MyService : IntentService("myService") {
 
     override fun onDestroy() {
 ////
-        super.onDestroy()//todo either unregister when done or create a background serivce
+        super.onDestroy()//todo either unregister when done or create a background serivce, maybe solved
         try{
             LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
 //            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);
@@ -128,11 +128,7 @@ class MyService : IntentService("myService") {
 //        intentSync.setFlags(Intent.);
 //        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-//        alarmMgr.setInexactRepeating(//todo only register once
-//                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-//                SystemClock.elapsedRealtime() + 100,
-//                60000, alarmIntent)//todo verify that this runs
-//
+
         LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
             addAction(syncAction)
             addAction(updateViewAction)
@@ -166,7 +162,7 @@ class MyService : IntentService("myService") {
 //                AlarmManager.ELAPSED_REALTIME_WAKEUP,
 //                SystemClock.elapsedRealtime() + 100,
 //                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
-        alarmMgr.setInexactRepeating(//todo only register once
+        alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
                 AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = syncAction }, 0))//todo verify that this runs
@@ -251,12 +247,11 @@ class MyService : IntentService("myService") {
         doAsync {
             try {
 //                data = ""
-                db.weatherDao().getPastDate(Date().time).forEach { db.weatherDao().delete(it) }
+                db.weatherDao().getPastDate(Date().time).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
                 updateViews()
-//todo empty old data
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -308,9 +303,9 @@ class MyService : IntentService("myService") {
 
                 } catch (e: SQLiteConstraintException) {
 //                    db.weatherDao().delete(db.weatherDao().getExactFromRoute(step.id!!,time.time)!!)
-                    db.weatherDao().insertAll(realWeatherData)
+//                    db.weatherDao().insertAll(realWeatherData)
 
-//                    db.weatherDao().updateAll(realWeatherData)
+                    db.weatherDao().updateAll(realWeatherData)
                     Log.d(TAG,"sqlite constraint did update ",e)
 
                 } catch (e: Exception) {
@@ -360,7 +355,7 @@ class MyService : IntentService("myService") {
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
-        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap
+        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)//todo either this or fix next wrap, closest seems to be working
         val next = db.destinationDao().getNextWrapAround(millistamp)
 
 //        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
@@ -397,7 +392,7 @@ class MyService : IntentService("myService") {
             var time = Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
             if (pair.second) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
+                time = (pair.first.comuteStartIntervalStart + timeOfDay + 36000000 + (it.timeElapsed * 1000))
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)

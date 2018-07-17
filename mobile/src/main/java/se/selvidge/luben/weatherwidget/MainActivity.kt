@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-        startService(Intent( this,MyService::class.java))//todo does this needs to be on, dont seem like it
+        startService(Intent( this,MyService::class.java))
 
 //        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
      myFragmentManager = getFragmentManager()
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
 //            //todo add permission question
 //            override fun onPlaceSelected(place: Place) {
 //                Log.i(TAG, "Place: " + place.getName())
-//                myService?.addComuteDestination(place,null, Pair(21600000L, 36000000L))//todo add view setting for interval
+//                myService?.addComuteDestination(place,null, Pair(21600000L, 36000000L))
 //            }
 //
 //            override fun onError(status: Status) {
@@ -189,7 +189,6 @@ class MainActivity : AppCompatActivity() {
             db.routeStepDao().insertAll(RouteStep(originPlace.latLng.latitude, originPlace.latLng.longitude, 1, destination.id!!))//also ugly
             db.routeStepDao().insertAll(RouteStep(destPlace.latLng.latitude, destPlace.latLng.longitude, 1, destination.id!!))//ugly
 
-//                //todo add view setting for interval
         }
         alert.setNeutralButton("select time"){d,i->//removes underlying dialog :(
             time.show()
@@ -201,7 +200,6 @@ class MainActivity : AppCompatActivity() {
 //            val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
 //            wds.start(object : WeekdaysDataSource.Callback{
 //                override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
-//                    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 //                }
 //
 //                override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
@@ -276,15 +274,6 @@ class MainActivity : AppCompatActivity() {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
 //                        Log.d(TAG, "$list")
-//                    val rView = findViewById<RecyclerView>(R.id.rView);
-//                    val adapter = CustomAdapter(this@MainActivity, list)
-//                    rView.layoutManager = GridLayoutManager(this@MainActivity, 2, GridLayoutManager.VERTICAL, false)
-//                    rView.adapter = adapter;
-//                cardViewHolder.addView( CardView(this@MainActivity).apply {
-//                    addView( ImageView(this@MainActivity).apply { imageResource = R.drawable.cloud })
-//                    addView( TextView(this@MainActivity).apply { text = dest })
-//                    addView( TextView(this@MainActivity).apply { text = text })
-//                        adapter.notifyItemChanged(list.size)// todo does not work
                         adapter.notifyDataSetChanged()
                     }
                 }
