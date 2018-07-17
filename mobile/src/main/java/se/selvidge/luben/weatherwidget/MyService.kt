@@ -251,6 +251,7 @@ class MyService : IntentService("myService") {
         doAsync {
             try {
 //                data = ""
+                db.weatherDao().getPastDate(Date().time).forEach { db.weatherDao().delete(it) }
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
@@ -303,12 +304,15 @@ class MyService : IntentService("myService") {
 //                            Log.d(TAG,"inserting $realWeatherData")
 
                     db.weatherDao().insertAll(realWeatherData)
-//                            Log.d(TAG,"did inserting ")
+                            Log.d(TAG,"did inserting ")
 
                 } catch (e: SQLiteConstraintException) {
-//                            Log.d(TAG,"sqlite constraint do update ",e)
+//                    db.weatherDao().delete(db.weatherDao().getExactFromRoute(step.id!!,time.time)!!)
+                    db.weatherDao().insertAll(realWeatherData)
 
-                    db.weatherDao().updateAll(realWeatherData)
+//                    db.weatherDao().updateAll(realWeatherData)
+                    Log.d(TAG,"sqlite constraint did update ",e)
+
                 } catch (e: Exception) {
                     Log.w(TAG, "other execption $e \n do update ")
 
@@ -400,7 +404,8 @@ class MyService : IntentService("myService") {
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-//                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather")
+                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
+                    Log.d(TAG,"${db.weatherDao().getAll()}")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
                         //                        Log.d(TAG, "weather  $it1")

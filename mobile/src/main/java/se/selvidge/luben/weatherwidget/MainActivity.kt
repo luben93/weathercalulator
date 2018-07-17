@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        strava.setOnClickListener { view ->
+        clock.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
 
@@ -91,16 +91,20 @@ class MainActivity : AppCompatActivity() {
 //            intent.data = Uri.parse ("http://strava.com/nfc/record")
 //            intent.putExtra("rideType","Ride")
 //            startActivity(intent)
+
             val intent = Intent(this, MyService::class.java)
             intent.action = MyService.syncAction
-            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            startService(intent)
+//    LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+//            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.syncAction })
 
         }
 
 
-        debug.setOnClickListener { view ->
+        recycle.setOnClickListener { view ->
 //            myService?.doAsyncPushToView()
-            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
+            startService(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
+//            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
 
         }
         LocalBroadcastManager.getInstance(this)
