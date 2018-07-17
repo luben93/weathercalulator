@@ -264,16 +264,12 @@ class MainActivity : AppCompatActivity() {
         updateCards()
     }
 
-    @SuppressLint("MissingPermission")
     fun updateCards() {
         list.clear()
         doAsync {
             //            var list = listOf<WeatherDestination>()
-            val db =  AppDatabase.getDatabase(this@MainActivity)
-            val loc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            val next =db.destinationDao().getClosetsOrigin(loc.latitude,loc.longitude)
-            db.destinationDao().getAll().forEach { dest ->
-                MyService.getWeatherView(dest,this@MainActivity,dest.id==next?.id)?.let {
+            AppDatabase.getDatabase(this@MainActivity).destinationDao().getAll().forEach { dest ->
+                MyService.getWeatherView(dest,this@MainActivity)?.let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
 //                        Log.d(TAG, "$list")

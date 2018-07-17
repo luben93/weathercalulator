@@ -40,7 +40,7 @@ class MyService : IntentService("myService") {
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
 
-        fun getWeatherView(dest: Destination,context: Context,wrapAround: Boolean):List<WeatherView>{
+        fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
             val me = MyService()
             me.db = AppDatabase.getDatabase(context)
             return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
