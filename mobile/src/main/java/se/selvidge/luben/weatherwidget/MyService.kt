@@ -374,7 +374,7 @@ class MyService : IntentService("myService") {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination): List<WeatherView> {
+    fun getWeatherView(dest: Destination,launchOrNow:Boolean=true): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
 
@@ -386,17 +386,17 @@ class MyService : IntentService("myService") {
         val timeSinceZeroZero = Date().time - EpochToZeroZero.timeInMillis
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
         val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero
-
+        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
 
 //        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = launchTimeEpoch +timeSinceZeroZero+ (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing
+            var time = t + (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing
             if (wrappedAround) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
-                time = ( dest.comuteStartIntervalStart + launchTimeEpoch + 36000000 + (it.timeElapsed * 1000))
+                time = (  t + 36000000 + (it.timeElapsed * 1000))
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
