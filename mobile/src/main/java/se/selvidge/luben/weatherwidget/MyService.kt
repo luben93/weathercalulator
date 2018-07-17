@@ -65,15 +65,7 @@ class MyService : IntentService("myService") {
     val weatherPointResolutionKm = 2
     val weatherPointResolutionSeconds = 1200
     lateinit var db: AppDatabase
-    //place lat,long
-    //home 59.179741,18.127764        0
-    //bandhagen 59.267410, 18.059313  1
-    //v'sterled 59.328446, 17.970361  2
-//    var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
-//    lateinit var fusedLocationClient:FusedLocationProviderClient
 
-//    var weatherData:
-//    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
 
     override fun onBind(intent: Intent): IBinder {
         return mBinder
@@ -157,10 +149,10 @@ class MyService : IntentService("myService") {
 //        intentSync.setFlags(Intent.);
         var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
 
-//        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
-//                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-//                SystemClock.elapsedRealtime() + 100,
-//                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
+        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + 100,
+                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
         alarmMgr.setInexactRepeating(
                 AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + 100,
@@ -298,14 +290,14 @@ class MyService : IntentService("myService") {
 //                            Log.d(TAG,"inserting $realWeatherData")
 
                     db.weatherDao().insertAll(realWeatherData)
-                            Log.d(TAG,"did inserting ")
+//                            Log.d(TAG,"did inserting ")
 
                 } catch (e: SQLiteConstraintException) {
 //                    db.weatherDao().delete(db.weatherDao().getExactFromRoute(step.id!!,time.time)!!)
 //                    db.weatherDao().insertAll(realWeatherData)
 
                     db.weatherDao().updateAll(realWeatherData)
-                    Log.d(TAG,"sqlite constraint did update ",e)
+//                    Log.d(TAG,"sqlite constraint did update ",e)
 
                 } catch (e: Exception) {
                     Log.w(TAG, "other execption $e \n do update ")
@@ -383,17 +375,17 @@ class MyService : IntentService("myService") {
     }
 
     fun getWeatherView(dest: Destination): List<WeatherView> {
-        val c = Calendar.getInstance() // today
-        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+        val EpochToZeroZero = Calendar.getInstance() // today
+        EpochToZeroZero.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
 
-        c.set(Calendar.HOUR, 0)
-        c.set(Calendar.MINUTE, 0)
-        c.set(Calendar.SECOND, 0)
-        c.set(Calendar.MILLISECOND, 0)
+        EpochToZeroZero.set(Calendar.HOUR, 0)
+        EpochToZeroZero.set(Calendar.MINUTE, 0)
+        EpochToZeroZero.set(Calendar.SECOND, 0)
+        EpochToZeroZero.set(Calendar.MILLISECOND, 0)
 //        Log.d(TAG,db.weatherDao().getAll().toString())
-        val millistamp = Date().time - c.timeInMillis
-        val launchtime = dest!!.comuteStartIntervalStart + c.timeInMillis
-        val wrappedAround = launchtime<Date().time
+        val timeSinceZeroZero = Date().time - EpochToZeroZero.timeInMillis
+        val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
+        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero
 
 
 //        val pair = Pair(dest, wrappedAround)
@@ -401,18 +393,18 @@ class MyService : IntentService("myService") {
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = launchtime +millistamp+ (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
+            var time = launchTimeEpoch +timeSinceZeroZero+ (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing
             if (wrappedAround) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
-                time = ( dest.comuteStartIntervalStart + launchtime + 36000000 + (it.timeElapsed * 1000))
+                time = ( dest.comuteStartIntervalStart + launchTimeEpoch + 36000000 + (it.timeElapsed * 1000))
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
-                    Log.d(TAG,"${db.weatherDao().getAll()}")
+//                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
+//                    Log.d(TAG,"${db.weatherDao().getAll()}")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
                         //                        Log.d(TAG, "weather  $it1")
