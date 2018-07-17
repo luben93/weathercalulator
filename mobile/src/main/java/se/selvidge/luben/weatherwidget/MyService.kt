@@ -1,16 +1,13 @@
 package se.selvidge.luben.weatherwidget
 
 import android.annotation.SuppressLint
-import android.app.AlarmManager
 import android.app.IntentService
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
 import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
-import android.os.SystemClock
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
@@ -111,59 +108,15 @@ class MyService : IntentService("myService") {
         Log.d(TAG, "on create")
         myself = this
         val context = this
-//        db = AppDatabase.getDatabase(context)
-
-
-        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-//        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
-//            action = syncAction
-//        }
-//        intentSync.setFlags(Intent.);
-//        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
-
 
         LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
             addAction(syncAction)
             addAction(updateViewAction)
             addAction(Intent.ACTION_BOOT_COMPLETED)
         })
-//        reciverRegister = true
-
-//        registerReceiver(alarmed(), IntentFilter(syncAction))
-
-//        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
-
-//        postCreate(this)
-//        this.registerReceiver(object : BroadcastReceiver() {
-//            override fun onReceive(p0: Context?, p1: Intent?) {
-//                Log.d(TAG, "did boot")
-//                if (p0 != null) {
-//                    postCreate(p0)
-//                }
-//            }
-//        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
-//    }
-//
-//    fun postCreate(context: Context) {
-//        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var intentSync = Intent(applicationContext, alarmed::class.java)
-
-//        intentSync.setFlags(Intent.);
-        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
-
-        alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
-        alarmMgr.setInexactRepeating(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = syncAction }, 0))//todo verify that this runs
-
 
         db = AppDatabase.getDatabase(context)
 
-//        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter(syncAction))
     }
 
     fun removeDestination(id: Destination) {
@@ -378,14 +331,14 @@ class MyService : IntentService("myService") {
 
     fun getWeatherView(dest: Destination,launchOrNow:Boolean=true): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
-        EpochToZeroZero.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+        EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
 
         EpochToZeroZero.set(Calendar.HOUR, 0)
         EpochToZeroZero.set(Calendar.MINUTE, 0)
         EpochToZeroZero.set(Calendar.SECOND, 0)
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
         val todayZeroZero = Calendar.getInstance() // today
-        todayZeroZero.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+        todayZeroZero.timeZone = TimeZone.getDefault() // comment out for local system current timezone
 
         todayZeroZero.set(Calendar.DAY_OF_MONTH, 0)
         todayZeroZero.set(Calendar.MONTH, 0)

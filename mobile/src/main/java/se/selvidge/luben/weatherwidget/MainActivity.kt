@@ -1,7 +1,9 @@
 package se.selvidge.luben.weatherwidget
 
 import android.annotation.SuppressLint
+import android.app.AlarmManager
 import android.app.FragmentManager
+import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -10,6 +12,7 @@ import android.content.IntentFilter
 import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.support.design.widget.Snackbar
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.app.AlertDialog
@@ -68,6 +71,19 @@ class MainActivity : AppCompatActivity() {
 
 //        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
      myFragmentManager = getFragmentManager()
+
+
+    val alarmMgr = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    var intentSync = Intent(applicationContext, alarmed::class.java)
+
+    alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
+            AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            SystemClock.elapsedRealtime() + 10,
+            60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = MyService.updateViewAction }, 0))//todo verify that this runs
+    alarmMgr.setInexactRepeating(
+            AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            SystemClock.elapsedRealtime() + 100,//time since last
+            AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = MyService.syncAction }, 0))//todo verify that this runs
 
     add.setOnClickListener { view ->
             Log.d(TAG,"gonna show picker")
