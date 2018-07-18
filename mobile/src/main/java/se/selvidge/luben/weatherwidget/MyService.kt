@@ -354,7 +354,7 @@ class MyService : IntentService("myService") {
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = t + (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing
+            var time = t + (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing, this does not show launchtime 
             if (wrappedAround) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
                 time = (  t + 36000000 + (it.timeElapsed * 1000))
