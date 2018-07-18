@@ -346,7 +346,7 @@ class MyService : IntentService("myService") {
 //        Log.d(TAG,db.weatherDao().getAll().toString())
         val timeSinceZeroZero = todayZeroZero.timeInMillis
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero
+        val wrappedAround = dest.comuteStartIntervalStart>timeSinceZeroZero
         val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)//todo timezone is fishy
 
 //        val pair = Pair(dest, wrappedAround)
@@ -357,7 +357,7 @@ class MyService : IntentService("myService") {
             var time = t + (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing, this does not show launchtime 
             if (wrappedAround) {//didWraparound //todo this is horribly broken
                 Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
-                time = (  t + 36000000 + (it.timeElapsed * 1000))
+                time = (  t + 86400000 + (it.timeElapsed * 1000))
                 //todo add weekend support
             }
 //                var now =  Date().time + (it.timeElapsed * 1000)
