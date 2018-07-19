@@ -110,4 +110,15 @@ class ExampleUnitTest {
         assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1, launchTimeEpoch+2000),59.3283,17.9699)),back)
 
     }
+
+    @Test
+    fun testLerp(){
+
+        var weatherData = WeatherData(18.0, 0.0, 1, 0.0, 1, 20)
+        var weatherData2 = WeatherData(25.0, 0.0, 1, 2.0, 5, 50)
+
+        val weather = Pair(weatherData, weatherData2).toWeatherData(35)
+        assertEquals(WeatherData(21.50, 0.0, 1,1.0,  3, 35),weather)
+
+    }
 }
