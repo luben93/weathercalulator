@@ -329,7 +329,7 @@ class MyService : IntentService("myService") {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination,launchOrNow:Boolean=true): List<WeatherView> {
+    fun getWeatherView(dest: Destination,wrappedAround:Boolean=false,launchOrNow:Boolean=true): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
         val timeSinceZeroZero:Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
@@ -343,23 +343,23 @@ class MyService : IntentService("myService") {
 //        Log.d(TAG,"sinceEpochMs ${EpochToZeroZero.timeInMillis}")
 //        Log.d(TAG,"timeZZ $timeSinceZeroZero")
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
+//        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
         val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
-
 //        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
-
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = t + (it.timeElapsed * 1000)
-            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
-                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
-                time = (  t + 86400000 + (it.timeElapsed * 1000))
-                //todo add weekend support
-            }
+            var time = t + (it.timeElapsed * 1000) + if(wrappedAround&&dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
+//            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
+//                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
+//                time = (  t + 86400000 + (it.timeElapsed * 1000))
+//                //todo add weekend support
+//            }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
+                Log.d(TAG, "pre create weatherview $it,$nextWeather  $time")
+
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
 //                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
 //                    Log.d(TAG,"${db.weatherDao().getAll()}")
