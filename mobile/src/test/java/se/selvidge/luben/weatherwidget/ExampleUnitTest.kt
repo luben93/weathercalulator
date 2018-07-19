@@ -33,16 +33,13 @@ class ExampleUnitTest {
         assertEquals(4, 2 + 2)
     }
 
-//    @Mock
     lateinit var mDb:AppDatabase
     lateinit var service:MyService
-//    @Mock
     lateinit var context: Context
     lateinit var EpochToZeroZero:Calendar
     var timeSinceZeroZero:Long =0
     @Before
     fun createDb() {
-//        val context = InstrumentationRegistry.getTargetContext()
         context = RuntimeEnvironment.application
 
         mDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
