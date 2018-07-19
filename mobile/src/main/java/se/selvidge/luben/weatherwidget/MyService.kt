@@ -346,7 +346,7 @@ class MyService : IntentService("myService") {
 //        Log.d(TAG,db.weatherDao().getAll().toString())
         val timeSinceZeroZero = todayZeroZero.timeInMillis
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        val wrappedAround = dest.comuteStartIntervalStart>timeSinceZeroZero
+        val wrappedAround = dest.comuteStartIntervalStart>timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
         val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)//todo timezone is fishy
 
 //        val pair = Pair(dest, wrappedAround)
