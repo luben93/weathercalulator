@@ -36,12 +36,12 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
         }
     }
     override fun onCreateViewHolder(parent : ViewGroup, type : Int) : CustomAdapter.ViewHolder{
-        val view : View = LayoutInflater.from(parent.context).inflate(R.layout.card_view_item, parent, false);
+        val view : View = LayoutInflater.from(parent.context).inflate(R.layout.card_view_item, parent, false)
         val card = view.findViewById(R.id.card_view) as CardView
         //   card.setCardBackgroundColor(Color.parseColor("#E6E6E6"));
-        card.maxCardElevation = 2.0F;
-        card.radius = 5.0F;
-        return ViewHolder(view);
+        card.maxCardElevation = 2.0F
+        card.radius = 5.0F
+        return ViewHolder(view)
     }
     override fun onBindViewHolder(holder : CustomAdapter.ViewHolder, position : Int){
         var album = list.get(position)
@@ -54,14 +54,14 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
 //                showPopupMenu(holder.overflowImageView)
 //            }
 //        });
-        holder.wholeCard.setOnClickListener{showPopupMenu(holder.thumbImageView,position)};
+        holder.wholeCard.setOnClickListener{showPopupMenu(holder.thumbImageView,position)}
 
     }
     private fun showPopupMenu(view: View,pos:Int) {
         // inflate menu
         val popup = PopupMenu(context, view)
-        val inflater = popup.getMenuInflater()
-        inflater.inflate(R.menu.menu_main, popup.getMenu())
+        val inflater = popup.menuInflater
+        inflater.inflate(R.menu.menu_main, popup.menu)
         popup.setOnMenuItemClickListener{
             Log.d("ADAPTER","adapter $it $view")
             MyService.myself?.removeDestination(list[pos].destination)
@@ -72,7 +72,7 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
         popup.show()
     }
     override fun getItemCount() : Int{
-        return list.size;
+        return list.size
     }
 
 

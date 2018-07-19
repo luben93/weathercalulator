@@ -95,7 +95,7 @@ class ExampleUnitTest {
         var back:WeatherView? = null
         Thread {
             mDb.destinationDao().insert(dest)
-            dest = mDb.destinationDao().getAll().first()!!
+            dest = mDb.destinationDao().getAll().first()
             var routeStep = RouteStep(59.3283, 17.9699, 2, dest.id!!)
             mDb.routeStepDao().insertAll(routeStep)
             routeStep = mDb.routeStepDao().getAllFromDestination(dest.id!!).first()

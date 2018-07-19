@@ -77,7 +77,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 
         dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "dest: " + place.getName())
+                Log.i(TAG, "dest: " + place.name)
                 destPlace = place
 
             }
@@ -89,7 +89,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 
         origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "origin: " + place.getName())
+                Log.i(TAG, "origin: " + place.name)
                 originPlace = place
             }
 

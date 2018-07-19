@@ -84,7 +84,7 @@ class MyService : IntentService("myService") {
 ////
         super.onDestroy()//todo either unregister when done or create a background serivce, maybe solved
         try{
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
             unregisterReceiver(receiver)
 
 //            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);

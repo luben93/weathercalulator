@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         startService(Intent( this,MyService::class.java))
 
 //        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
-     myFragmentManager = getFragmentManager()
+     myFragmentManager = fragmentManager
 
 
     val alarmMgr = getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -147,17 +147,17 @@ class MainActivity : AppCompatActivity() {
 //        })
 
 
-        val rView = findViewById<RecyclerView>(R.id.rView);
-        adapter = CustomAdapter(this@MainActivity, list)
+        val rView = findViewById<RecyclerView>(R.id.rView)
+    adapter = CustomAdapter(this@MainActivity, list)
         rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
-        rView.adapter = adapter;
+        rView.adapter = adapter
 
 
-    }
+}
 
     @SuppressLint("MissingPermission")
     private fun dialogShower(){
-        var display = getWindowManager().getDefaultDisplay();
+        var display = windowManager.defaultDisplay
 //            var size = Point();
 //            display.getSize(size);
 //
@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
 
         dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "dest: " + place.getName())
+                Log.i(TAG, "dest: " + place.name)
                 destPlace = place
 
             }
@@ -188,7 +188,7 @@ class MainActivity : AppCompatActivity() {
 
         origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "origin: " + place.getName())
+                Log.i(TAG, "origin: " + place.name)
                 originPlace =place
             }
             override fun onError(status: Status) { Log.i(TAG, "An error occurred: $status") }
@@ -285,10 +285,10 @@ class MainActivity : AppCompatActivity() {
         doAsync {
             //            var list = listOf<WeatherDestination>()
             AppDatabase.getDatabase(this@MainActivity).destinationDao().getAll().forEach { dest ->
-                MyService.getWeatherView(dest,this@MainActivity)?.let {
+                MyService.getWeatherView(dest,this@MainActivity).let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
-//                        Log.d(TAG, "$list")
+                        //                        Log.d(TAG, "$list")
                         adapter.notifyDataSetChanged()
                     }
                 }
