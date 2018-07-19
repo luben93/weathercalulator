@@ -332,30 +332,27 @@ class MyService : IntentService("myService") {
     fun getWeatherView(dest: Destination,launchOrNow:Boolean=true): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
+        val timeSinceZeroZero:Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
+                +EpochToZeroZero.get(Calendar.SECOND)) * 1000L + EpochToZeroZero.get(Calendar.MILLISECOND)
 
-        EpochToZeroZero.set(Calendar.HOUR, 0)
+        EpochToZeroZero.set(Calendar.HOUR_OF_DAY, 0)
         EpochToZeroZero.set(Calendar.MINUTE, 0)
         EpochToZeroZero.set(Calendar.SECOND, 0)
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
-        val todayZeroZero = Calendar.getInstance() // today
-        todayZeroZero.timeZone = TimeZone.getDefault() // comment out for local system current timezone
 
-        todayZeroZero.set(Calendar.DAY_OF_MONTH, 0)
-        todayZeroZero.set(Calendar.MONTH, 0)
-        todayZeroZero.set(Calendar.YEAR, 0)
-//        Log.d(TAG,db.weatherDao().getAll().toString())
-        val timeSinceZeroZero = todayZeroZero.timeInMillis
+//        Log.d(TAG,"sinceEpochMs ${EpochToZeroZero.timeInMillis}")
+//        Log.d(TAG,"timeZZ $timeSinceZeroZero")
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        val wrappedAround = dest.comuteStartIntervalStart>timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
-        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)//todo timezone is fishy
+        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
+        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
 
 //        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
 
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = t + (it.timeElapsed * 1000)//todo timeSinceZeroZero is drifting everthing, this does not show launchtime 
-            if (wrappedAround) {//didWraparound //todo this is horribly broken
+            var time = t + (it.timeElapsed * 1000)
+            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
                 Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
                 time = (  t + 86400000 + (it.timeElapsed * 1000))
                 //todo add weekend support
