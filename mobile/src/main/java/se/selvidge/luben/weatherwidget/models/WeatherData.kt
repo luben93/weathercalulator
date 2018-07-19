@@ -2,7 +2,7 @@ package se.selvidge.luben.weatherwidget.models
 
 import android.arch.persistence.room.*
 
-@Entity(primaryKeys = ["route_id","time"],foreignKeys = arrayOf(ForeignKey(entity = RouteStep::class,parentColumns = arrayOf("id"),childColumns = arrayOf("route_id"))))
+@Entity(primaryKeys = ["route_id","time"],foreignKeys = arrayOf(ForeignKey(entity = RouteStep::class,parentColumns = arrayOf("id"),childColumns = arrayOf("route_id"),onDelete = ForeignKey.CASCADE)))
 data class WeatherData(
 
     var temp:Double,
@@ -28,6 +28,10 @@ interface WeatherDataDAO{
 //
 //    @Query("SELECT * FROM weatherData WHERE lat = :lat AND lon = :lon AND " + "abs( time - :timestamp )< 1800000 LIMIT 1")
 //    fun findByPlaceAndTime(lat:Double,lon:Double, timestamp: Long): WeatherData
+
+    @Query("SELECT * FROM weatherdata WHERE time < :timestamp ")
+    fun getPastDate(timestamp:Long):List<WeatherData>
+
 
     @Query("SELECT * FROM weatherdata WHERE route_id = :routeId AND " + " time > :timestamp ORDER BY time DESC LIMIT 1")
     fun getNextFromRoute(routeId: Int,timestamp:Long):WeatherData?

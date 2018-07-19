@@ -4,13 +4,13 @@ package se.selvidge.luben.weatherwidget
 import android.content.Context
 import android.location.Geocoder
 import android.support.v7.widget.CardView
-import android.support.v7.widget.PopupMenu
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import com.squareup.picasso.Picasso
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
@@ -25,14 +25,14 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
         var titleTextView: TextView
         var countTextView: TextView
         var thumbImageView : ImageView
-//        var overflowImageView : ImageView
+        var wholeCard : CardView
 
 
         init {
             titleTextView = itemView.findViewById(R.id.title) as TextView
             countTextView = itemView.findViewById(R.id.data) as TextView
             thumbImageView = itemView.findViewById(R.id.thumbnail) as ImageView
-//            overflowImageView = itemView.findViewById(R.id.overflow) as ImageView
+            wholeCard = itemView.findViewById(R.id.card_view) as CardView
         }
     }
     override fun onCreateViewHolder(parent : ViewGroup, type : Int) : CustomAdapter.ViewHolder{
@@ -45,7 +45,7 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
     }
     override fun onBindViewHolder(holder : CustomAdapter.ViewHolder, position : Int){
         var album = list.get(position)
-        holder.titleTextView.text = geo.getFromLocation(album.destination.lat,album.destination.lon,1).first().subLocality
+        holder.titleTextView.text = geo.getFromLocation(album.destination.lat,album.destination.lon,1).first().thoroughfare
         holder.countTextView.text = album.weatherDatas.fold("",{acc,data->acc+data.getPrettyToString(context)})
 //        holder.thumbImageView.setImageResource(R.drawable.cloud);
         Picasso.get().load("file:///android_asset/cloud.png").into(holder.thumbImageView)
@@ -54,16 +54,20 @@ class CustomAdapter(private val context : Context, private val list : List<Weath
 //                showPopupMenu(holder.overflowImageView)
 //            }
 //        });
-        holder.thumbImageView.setOnClickListener{showPopupMenu(holder.thumbImageView)};
+        holder.wholeCard.setOnClickListener{showPopupMenu(holder.thumbImageView,position)};
+
     }
-    private fun showPopupMenu(view: View) {
+    private fun showPopupMenu(view: View,pos:Int) {
         // inflate menu
         val popup = PopupMenu(context, view)
         val inflater = popup.getMenuInflater()
         inflater.inflate(R.menu.menu_main, popup.getMenu())
         popup.setOnMenuItemClickListener{
             Log.d("ADAPTER","adapter $it $view")
+            MyService.myself?.removeDestination(list[pos].destination)
+
             true
+
         }
         popup.show()
     }

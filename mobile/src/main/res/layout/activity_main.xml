@@ -28,8 +28,10 @@
     android:orientation="vertical"
     >
 
+
+
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/debug"
+        android:id="@+id/recycle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
@@ -37,12 +39,20 @@
         app:srcCompat="@android:drawable/stat_notify_sync_noanim" />
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/strava"
+        android:id="@+id/clock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
         app:srcCompat="@android:drawable/ic_lock_idle_alarm" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/add"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin"
+        app:srcCompat="@android:drawable/ic_input_add" />
 
 
 </LinearLayout>

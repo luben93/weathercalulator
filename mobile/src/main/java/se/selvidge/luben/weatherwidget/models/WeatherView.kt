@@ -21,6 +21,7 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
         if(name == null){
             name = place.thoroughfare
         }
+        //todo if weather time is not today also show day
         return "${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
     }
 

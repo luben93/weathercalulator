@@ -1,17 +1,13 @@
 package se.selvidge.luben.weatherwidget
 
 import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.IntentService
 import android.appwidget.AppWidgetManager
 import android.content.*
 import android.database.sqlite.SQLiteConstraintException
-import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
-import android.os.SystemClock
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
@@ -29,7 +25,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class MyService : Service() {
+class MyService : IntentService("myService") {
     //todone add alarm manager to update weather
     //todone listen after intents and react aproriatly, widget button etc
     //maybe use Machine learning to train weather -> clothes model
@@ -41,13 +37,20 @@ class MyService : Service() {
             context.sendBroadcast(Intent(context, MyService::class.java))
         }
 
+        fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
+            val me = MyService()
+            me.db = AppDatabase.getDatabase(context)
+            return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
+
+        }
         var widget: NewAppWidget? = null
-        val syncAction = "syncAction"
+        val syncAction = "NETWORK_SYNC"
+        val updateViewAction = "VIEW_UPDATE"
         val halfHourInMs = 1800000
         val TAG = "SERVICE"
         var now: Long = 0
             get() = Date().time
-
+        var myself: MyService? = null
 //        var data = "not updated yet"
     }
 
@@ -59,102 +62,83 @@ class MyService : Service() {
     val weatherPointResolutionKm = 2
     val weatherPointResolutionSeconds = 1200
     lateinit var db: AppDatabase
-    //place lat,long
-    //home 59.179741,18.127764        0
-    //bandhagen 59.267410, 18.059313  1
-    //v'sterled 59.328446, 17.970361  2
-//    var locations = listOf(Pair(59.179741, 18.127764), Pair(59.267410, 18.059313), Pair(59.328446, 17.970361))
-//    lateinit var fusedLocationClient:FusedLocationProviderClient
 
-//    var weatherData:
-//    var data = listOf(WeatherData(20.0,1.0,1,false,Address(Locale.ENGLISH)))
 
     override fun onBind(intent: Intent): IBinder {
         return mBinder
     }
 
-    inner class AlarmReciver() : BroadcastReceiver() {
-
-        override fun onReceive(p0: Context?, p1: Intent?) {
-            Log.d(TAG, "------------------------local-----------------------\nbrodcast inner class $p0, $p1")
-
-            doUpdate()
+//    var reciverRegister = false
+    var receiver = object : BroadcastReceiver() {
+        override fun onReceive(broadcastContext: Context, broadcastIntent: Intent) {
+//    override fun onHandleIntent(broadcastIntent: Intent) {
+//        val broadcastContext = this
+            Log.d(TAG,"broadcastContext = [${broadcastContext}], broadcastIntent = [${broadcastIntent}]")
+        broadcastContext.startService(broadcastIntent)
+//            doUpdate()
         }
 
     }
 
-//    override fun onDestroy() {
-//
-// super.onDestroy()//todo either unregister when done or create a background serivce
-//        try {
-//            unregisterReceiver(AlarmReciver())
-//        } catch (e: Exception) {
-//
-//        }
-//    }
+    override fun onDestroy() {
+////
+        super.onDestroy()//todo either unregister when done or create a background serivce, maybe solved
+        try{
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver);
+            unregisterReceiver(receiver)
+
+//            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);
+////            reciverRegister =false
+        }catch(e:IllegalArgumentException){
+            e.printStackTrace()
+        }
+    }
+
+    override fun onHandleIntent(p0: Intent) {
+        Log.d(TAG, "------------------------local-----------------------\nhandle intent, $p0")
+        when (p0.action) {
+            syncAction -> myself?.doUpdate()
+            updateViewAction -> myself?.updateViews()
+            Intent.ACTION_BOOT_COMPLETED -> Log.d(TAG,"did boot")
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "on create")
+        myself = this
         val context = this
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
+            addAction(syncAction)
+            addAction(updateViewAction)
+            addAction(Intent.ACTION_BOOT_COMPLETED)
+        })
+
         db = AppDatabase.getDatabase(context)
 
-
-        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
-            action = syncAction
-        }
-//        intentSync.setFlags(Intent.);
-        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
-
-        alarmMgr.setInexactRepeating(//todo only register once
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
-//        registerReceiver(alarmed(), IntentFilter(syncAction))
-
-//        locationManager =  this.getSystemService(Context.LOCATION_SERVICE) as LocationManager;
-
-
-        this.registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(p0: Context?, p1: Intent?) {
-                Log.d(TAG, "did boot")
-                if (p0 != null) {
-                    postCreate(p0)
-                }
-            }
-        }, IntentFilter(Intent.ACTION_BOOT_COMPLETED))//todo does not work like expected
     }
 
-    fun postCreate(context: Context){
-        val alarmMgr = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var intentSync = Intent(applicationContext, alarmed::class.java).apply {
-            action = syncAction
+    fun removeDestination(id: Destination) {
+        doAsync {
+            db.destinationDao().delete(id)
+            Log.d(TAG, "${db.destinationDao().getAll()} \n" +
+                    " ${db.routeStepDao()} \n" +
+                    " ${db.weatherDao()}")
         }
-//        intentSync.setFlags(Intent.);
-        var alarmIntent = PendingIntent.getBroadcast(applicationContext, 0, intentSync, 0)
-
-        alarmMgr.setInexactRepeating(//todo only register once
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + 100,
-                AlarmManager.INTERVAL_HOUR, alarmIntent)//todo verify that this runs
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(AlarmReciver(), IntentFilter(syncAction))
     }
 
     @SuppressLint("MissingPermission")//todo add permission question
     internal fun getRouteToDestination(dest: Destination) {
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+//        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
         val mode = "bicycling"
         var request = Request.Builder()//todo https://www.graphhopper.com/
-                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${currentLocation.latitude.toString() + "," + currentLocation.longitude}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
+                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${dest.fromLat.toString() + "," + dest.fromLon}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
         val response = client.newCall(request).execute()
         val out = response.body()?.string()
-        Log.d(TAG, out)
+//        Log.d(TAG, out)
         val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0
         var timeElapsed = 0
@@ -185,38 +169,35 @@ class MyService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    fun addComuteDestination(place: Place, interval: Pair<Long, Long>) {
+    fun addComuteDestination(dest: Place, currentLocation: Place, interval: Pair<Long, Long>) {
         doAsync {
-            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-
-            var destination = Destination(place.latLng.latitude, place.latLng.longitude, currentLocation.latitude, currentLocation.longitude, interval.first, interval.second)
+            //            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            Log.d(TAG, "$dest $currentLocation")
+            var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.longitude, interval.first, interval.second)
             val id = db.destinationDao().insert(destination)
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-            Log.d(TAG,"inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(currentLocation.latitude, currentLocation.longitude, 1, destination.id!!))
+            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
+            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.longitude, 1, destination.id!!))//also ugly
+            db.routeStepDao().insertAll(RouteStep(dest.latLng.latitude, dest.latLng.longitude, 1, destination.id!!))//ugly
             getRouteToDestination(destination)
 
         }
     }
 
-    fun doAsyncPushToView() {
-        doAsync {
-            updateViews()
-        }
-    }
+
+
 
     fun doUpdate() {
         Log.d(TAG, "gonna update")
 
         doAsync {
             try {
-                val geo = Geocoder(this@MyService)
 //                data = ""
+                db.weatherDao().getPastDate(Date().time).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
                 updateViews()
-//todo empty old data
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -229,7 +210,7 @@ class MyService : Service() {
     private fun getWeatherJson(step: RouteStep, time: Date) {
 
         val context = this
-        Log.d(TAG,"starting weather fetch ${step.lat} ${step.lon}")
+//        Log.d(TAG, "starting weather fetch ${step.lat} ${step.lon}")
         var request = Request.Builder()//todo https://openweathermap.org/api
                 .url("https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${step.lon.format(6)}/lat/${step.lat.format(6)}/data.json")
                 .build()
@@ -267,9 +248,12 @@ class MyService : Service() {
 //                            Log.d(TAG,"did inserting ")
 
                 } catch (e: SQLiteConstraintException) {
-//                            Log.d(TAG,"sqlite constraint do update ",e)
+//                    db.weatherDao().delete(db.weatherDao().getExactFromRoute(step.id!!,time.time)!!)
+//                    db.weatherDao().insertAll(realWeatherData)
 
                     db.weatherDao().updateAll(realWeatherData)
+//                    Log.d(TAG,"sqlite constraint did update ",e)
+
                 } catch (e: Exception) {
                     Log.w(TAG, "other execption $e \n do update ")
 
@@ -284,6 +268,7 @@ class MyService : Service() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun updateViews() {
 
         //widget
@@ -291,19 +276,19 @@ class MyService : Service() {
                 .applicationContext)
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
-
+        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         viewModel = listOf()
 
-        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
-        val c = Calendar.getInstance() // today
-        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
-
-        c.set(Calendar.HOUR, 0)
-        c.set(Calendar.MINUTE, 0)
-        c.set(Calendar.SECOND, 0)
-        c.set(Calendar.MILLISECOND, 0)
-//        Log.d(TAG,db.weatherDao().getAll().toString())
-        val millistamp = Date().time - c.timeInMillis
+//        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
+//        val c = Calendar.getInstance() // today
+//        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
+//
+//        c.set(Calendar.HOUR, 0)
+//        c.set(Calendar.MINUTE, 0)
+//        c.set(Calendar.SECOND, 0)
+//        c.set(Calendar.MILLISECOND, 0)
+////        Log.d(TAG,db.weatherDao().getAll().toString())
+//        val millistamp = Date().time - c.timeInMillis
         //setup done
 
 
@@ -316,12 +301,18 @@ class MyService : Service() {
 
 //        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
 //                destination.let { pair ->
-            db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
+        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
+//        val next = db.destinationDao().getNextWrapAround(millistamp)
+
+//        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
             //            Log.d(TAG, pair.toString())
-                viewModel = getWeatherView(pair.first!!,pair.second,c.timeInMillis)
+//        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
+//        val pair = Pair(closest,launchtime<Date().time)
+//            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
+        viewModel = getWeatherView(closest)
+//        }
 
-        }
-
+        Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
             val out = acc + row.getPrettyToString(this@MyService)
             out
@@ -334,27 +325,44 @@ class MyService : Service() {
 //        return data
     }
 
-    fun returnListOfDestinations():List<Destination>{
+    fun returnListOfDestinations(): List<Destination> {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination,wrappedAround:Boolean = false,timeOfDay:Long=Date().time):List<WeatherView>{
-        val pair = Pair(dest,wrappedAround)
-        var output = listOf<WeatherView>()
-        db.routeStepDao().getAllFromDestination(pair.first.id!!).forEach {
+    fun getWeatherView(dest: Destination,wrappedAround:Boolean=false,launchOrNow:Boolean=true): List<WeatherView> {
+        val EpochToZeroZero = Calendar.getInstance() // today
+        EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
+        val timeSinceZeroZero:Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
+                +EpochToZeroZero.get(Calendar.SECOND)) * 1000L + EpochToZeroZero.get(Calendar.MILLISECOND)
 
+        EpochToZeroZero.set(Calendar.HOUR_OF_DAY, 0)
+        EpochToZeroZero.set(Calendar.MINUTE, 0)
+        EpochToZeroZero.set(Calendar.SECOND, 0)
+        EpochToZeroZero.set(Calendar.MILLISECOND, 0)
+
+//        Log.d(TAG,"sinceEpochMs ${EpochToZeroZero.timeInMillis}")
+//        Log.d(TAG,"timeZZ $timeSinceZeroZero")
+        val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
+//        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
+        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
+//        val pair = Pair(dest, wrappedAround)
+        var output = listOf<WeatherView>()
+        db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time =  Date().time + (it.timeElapsed * 1000)//todo replace all Date().time with now val and use timezones
-            if(pair.second){//didWraparound
-                Log.d(TAG,"did wraparound ${pair.first.comuteStartIntervalStart} ${timeOfDay} ")
-                time = (pair.first.comuteStartIntervalStart + timeOfDay  + 36000000 + (it.timeElapsed * 1000)) //- 86400000 //todo -10h not working,
-                //todo add weekend support
-            }
+            var time = t + (it.timeElapsed * 1000) + if(wrappedAround&&dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
+//            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
+//                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
+//                time = (  t + 86400000 + (it.timeElapsed * 1000))
+//                //todo add weekend support
+//            }
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
+                Log.d(TAG, "pre create weatherview $it,$nextWeather  $time")
+
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-                                        Log.d(TAG,"pre create weatherview $it,$nextWeather $prevWeather")
+//                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
+//                    Log.d(TAG,"${db.weatherDao().getAll()}")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
                         //                        Log.d(TAG, "weather  $it1")
@@ -418,13 +426,13 @@ operator fun JSONArray.iterator(): Iterator<JSONObject> = (0 until length()).asS
 
 fun Double.format(fracDigits: Int) = "%.${fracDigits}f".format(Locale.ENGLISH, this)
 
-fun DestinationDao.getNextWrapAround(time: Long): Pair<Destination?,Boolean >{
+fun DestinationDao.getNextWrapAround(time: Long): Pair<Destination?, Boolean> {
     var out = getNext(time)
     val wraparpound = out == null
     if (wraparpound) {
         out = getNext(0)
     }
-    return Pair(out,wraparpound)
+    return Pair(out, wraparpound)
 
 }
 

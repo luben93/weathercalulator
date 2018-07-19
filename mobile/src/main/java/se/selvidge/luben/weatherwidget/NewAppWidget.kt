@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
 
@@ -46,6 +47,7 @@ class NewAppWidget : AppWidgetProvider() {
          fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
                                      appWidgetId: Int) {
 //            counter++
+             Log.d(TAG,"didrecive something")
 
 //            val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
 //            val widgetText = counter.toString() + data
@@ -65,7 +67,10 @@ class NewAppWidget : AppWidgetProvider() {
 
             // Instruct the widget manager to update the widget
             appWidgetManager.updateAppWidget(appWidgetId, views)
-        }
+
+             LocalBroadcastManager.getInstance(context).sendBroadcast(Intent(context,MyService::class.java).apply { action = MyService.updateViewAction })
+
+         }
 
 
 //    }
