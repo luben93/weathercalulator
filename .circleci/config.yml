@@ -12,7 +12,7 @@ jobs:
           key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
       - run:
          name: add fake api key
-         command: echo '<resources><string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">nope</string><string name="google_direction_key" templateMergeStrategy="preserve" translatable="false">nope</string></resources>' > mobile/src/res/values/google_maps_api.xml
+         command: echo '<resources><string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">nope</string><string name="google_direction_key" templateMergeStrategy="preserve" translatable="false">nope</string></resources>' > mobile/src/main/res/values/google_maps_api.xml
 
       - run:
           name: Download Dependencies
