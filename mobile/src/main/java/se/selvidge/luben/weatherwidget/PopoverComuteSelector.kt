@@ -60,7 +60,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         var destPlace: Place? = null
         var originPlace: Place? = null
         var timeStart: Long = 0
-        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
+        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)//todo this does not work anymore, do inserts yourself 
 
 //            var alert = AlertDialog.Builder(this@MainActivity)
 //        val inflated = this.layoutInflater.inflate(R.layout.comute_selector,this)
@@ -71,7 +71,8 @@ class PopoverComuteSelector : AppCompatActivity() {
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
         origin.setText(Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first().thoroughfare)
-
+        
+        //todo show time as button text and use current time as base 
         val time = TimePickerDialog(this, { view, hour, minute -> timeStart = (hour * 60 * 60 + minute * 60) * 1000L }, 1, 1, true)
 
         dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
@@ -98,7 +99,9 @@ class PopoverComuteSelector : AppCompatActivity() {
         })
 
         selector_submit.setOnClickListener {
-                destPlace?.let { it1 -> originPlace?.let { it2 -> myService?.addComuteDestination(it1, it2, Pair(timeStart, 36000000L)) } }
+            //todo verify this
+                destPlace?.let { it1 -> originPlace?.let { it2 -> myService?.addComuteDestination(it1, it2, Pair(timeStart, 36000000L)) } }//todo move myservice.addComuteDest to separate function
+            //todo stop this activiy if succesful, and navigate back
         }
 //            alert.setView(inflated)
 //            alert.setPositiveButton("Add"){dialogInterface, i ->
@@ -125,6 +128,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 //
             }
         })
+        
 
 //            dialog.show()
 //        return inflated
