@@ -355,6 +355,7 @@ class MyService : IntentService("myService") {
 //                time = (  t + 86400000 + (it.timeElapsed * 1000))
 //                //todo add weekend support
 //            }
+            println(time)
 //                var now =  Date().time + (it.timeElapsed * 1000)
 //                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
