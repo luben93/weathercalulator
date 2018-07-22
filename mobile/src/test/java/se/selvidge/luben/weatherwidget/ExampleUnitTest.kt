@@ -10,13 +10,7 @@ import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.doAsyncResult
 import org.junit.Before
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.runners.MockitoJUnitRunner
-import org.powermock.api.mockito.PowerMockito
-import org.powermock.api.mockito.PowerMockito.`when`
-import org.powermock.api.mockito.PowerMockito.mockStatic
-import org.powermock.core.classloader.annotations.PowerMockIgnore
-import org.powermock.core.classloader.annotations.PrepareForTest
+
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -33,9 +27,6 @@ import java.util.*
 
 
 @RunWith(RobolectricTestRunner::class)
-@Config(constants = BuildConfig::class)
-        @PowerMockIgnore( "org.mockito.*", "org.robolectric.*", "android.*" )
-@PrepareForTest(Calendar::class)
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
@@ -127,7 +118,7 @@ class ExampleUnitTest {
             var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+(timediff/2))
             mDb.weatherDao().insertAll(weatherData,weatherData2)
 //            println(mDb.weatherDao().getAll())
-            back= service.getWeatherView(dest).first()
+            back= service.getWeatherView(dest,false).first()
         }.apply { start() }.join()
 
         val view =WeatherView(WeatherData(5.006669054188066, 0.0, 1,1.0013338108376133,  1, launchTimeEpoch+2000),59.3283,17.9699)

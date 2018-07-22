@@ -40,7 +40,7 @@ class MyService : IntentService("myService") {
         fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
             val me = MyService()
             me.db = AppDatabase.getDatabase(context)
-            return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
+            return me.getWeatherView(dest,!dest.comuteStartIntervalStart.IsToday())//todo needs to handle both wraparound and sameday
 
         }
         var widget: NewAppWidget? = null
@@ -309,7 +309,7 @@ class MyService : IntentService("myService") {
 //        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
 //        val pair = Pair(closest,launchtime<Date().time)
 //            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
-        viewModel = getWeatherView(closest)
+        viewModel = getWeatherView(closest,!closest.comuteStartIntervalStart.IsToday())
 //        }
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
@@ -442,5 +442,17 @@ fun RouteStepDao.updateOrInsert(input: RouteStep) {
     if (back != null) {
         back
     }
+
+}
+
+fun Long.IsToday():Boolean{
+    val cal = Calendar.getInstance()
+    cal.timeZone = TimeZone.getDefault()// comment out for local system current timezone
+
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return this > cal.timeInMillis
 
 }
