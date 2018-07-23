@@ -21,8 +21,14 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
         if(name == null){
             name = place.thoroughfare
         }
+        val dataDate = SimpleDateFormat("dd").format(weatherData.time) 
+        val todayDate = SimpleDateFormat("dd").format(System.currentTimeMillis()) 
+        var weekday = ""
+        if(todayDate == dateDate){
+            weekday = SimpleDateFormat("EEE").format(weatherData.time) + " "
+        }
         //todo if weather time is not today also show day
-        return "${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
+        return "${weekday}${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
     }
 
     fun getPlace(c: Context): Address {
