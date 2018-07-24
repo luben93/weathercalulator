@@ -309,7 +309,7 @@ class MyService : IntentService("myService") {
 //        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
 //        val pair = Pair(closest,launchtime<Date().time)
 //            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
-        viewModel = getWeatherView(closest,!closest.comuteStartIntervalStart.IsToday())
+        viewModel = getWeatherView(closest)//,!closest.comuteStartIntervalStart.IsToday())
 //        }
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
