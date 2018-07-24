@@ -193,7 +193,7 @@ class MyService : IntentService("myService") {
         doAsync {
             try {
 //                data = ""
-                db.weatherDao().getPastDate(Date().time).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
+                db.weatherDao().getPastDate(Date().time-864000).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
