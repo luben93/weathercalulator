@@ -310,7 +310,7 @@ class MyService : IntentService("myService") {
 //        val pair = Pair(closest,launchtime<Date().time)
 //            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
         val today = closest.comuteStartIntervalStart.IsToday()
-        viewModel = getWeatherView(closest,!today,today)//todo if past launch time but still upcomming ??????????
+        viewModel = getWeatherView(closest,!today,!today)//todo if past launch time but still upcomming ??????????
 //        }
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
@@ -345,7 +345,7 @@ class MyService : IntentService("myService") {
 //        Log.d(TAG,"timeZZ $timeSinceZeroZero")
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
 //        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
-        val t = (if(launchOrNow) launchTimeEpoch else timeSinceZeroZero)
+        val t = (if(launchOrNow && dest.comuteStartIntervalStart > timeSinceZeroZero) launchTimeEpoch else timeSinceZeroZero + EpochToZeroZero.timeInMillis)
 //        val pair = Pair(dest, wrappedAround)
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
