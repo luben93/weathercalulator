@@ -127,7 +127,7 @@ class PopoverComuteSelector : AppCompatActivity() {
             //todo stop this activiy if succesful, and navigate back
             doAsync {
                try{
-                   addDestination()
+                   addDestination()                   //todo fails
                    this@PopoverComuteSelector.finish()
                 } catch (e:Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
