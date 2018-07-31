@@ -53,11 +53,11 @@ class NewAppWidget : AppWidgetProvider() {
 //            val widgetText = counter.toString() + data
             // Construct the RemoteViews object
             val views = RemoteViews(context.packageName, R.layout.new_app_widget)
-//            views.setTextViewText(R.id.appwidget_text, widgetText)
+            views.setTextViewText(R.id.appwidget_text, "missing something")
 //            MyService.getWeatherModel()
 
 //            val intent = Intent(context, MyService::class.java)//todone send intent to service
-            val intent = Intent(context, MainActivity::class.java)
+            val intent = Intent(context, MainActivity::class.java).apply { action = MainActivity.YOUR_AWESOME_ACTION }
 //            val intent = Intent(context, this::class.java)
 //            intent.putExtra("key","hehe")
 //            intent.setAction(MainActivity::YOUR_AWESOME_ACTION.toString())
