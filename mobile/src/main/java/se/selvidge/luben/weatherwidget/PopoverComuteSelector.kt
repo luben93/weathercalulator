@@ -32,6 +32,7 @@ import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.Destination
 import se.selvidge.luben.weatherwidget.models.RouteStep
 import java.io.IOException
+import java.sql.SQLException
 import java.util.*
 
 class PopoverComuteSelector : AppCompatActivity() {
@@ -128,10 +129,10 @@ class PopoverComuteSelector : AppCompatActivity() {
             doAsync {
                try{
                    addDestination()                   //todo fails
-                   this@PopoverComuteSelector.finish()
                 } catch (e:Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show()
+                   e.printStackTrace()
                 }
             }
         }
@@ -206,60 +207,83 @@ class PopoverComuteSelector : AppCompatActivity() {
 
 
             val db = AppDatabase.getDatabase(this)
-            db.beginTransaction()
-            Log.d(MyService.TAG, "gonna insert $destPlace $originPlace")
+
+//            db.beginTransaction()
+            Log.d(TAG, "gonna insert $destPlace $originPlace")
             var destination = Destination(destPlace.latLng.latitude, destPlace.latLng.longitude, originPlace.latLng.latitude, originPlace.latLng.longitude, timeStart, 0)
             val id = db.destinationDao().insert(destination)
+            Log.d(TAG,"dest $destination  insert id $id")
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-            Log.d(MyService.TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
+            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
             db.routeStepDao().insertAll(RouteStep(originPlace.latLng.latitude, originPlace.latLng.longitude, 1, destination.id!!))//also ugly
-            db.routeStepDao().insertAll(RouteStep(destPlace.latLng.latitude, destPlace.latLng.longitude, 1, destination.id!!))//ugly
-            db.endTransaction()
-        doAsync {
-            getRouteToDestination(destination)
-        }
+//            db.routeStepDao().insertAll(RouteStep(destPlace.latLng.latitude, destPlace.latLng.longitude, 1, destination.id!!))//ugly
+//        doAsync {
+//            try {
+                getRouteToDestination(destination)
+//            }catch (e: SQLException){
+//                Snackbar.make(selector_submit, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show()            }
 
+//        }
+//            db.endTransaction()
+
+//}
+
+    }
+
+    internal fun done(){
+        runOnUiThread {
+            this@PopoverComuteSelector.finish()
+        }
     }
 
     internal fun getRouteToDestination(dest: Destination) {
 //        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         val client = OkHttpClient()
-        val db = AppDatabase.getDatabase(this)
 
         val mode = "bicycling"
         var request = Request.Builder()//todo https://www.graphhopper.com/
                 .url("https://maps.googleapis.com/maps/api/directions/json?origin=${dest.fromLat.toString() + "," + dest.fromLon}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
-        client.newCall(request).enqueue(object:Callback{
-            override fun onFailure(call: Call?, e: IOException) {
-                Snackbar.make(selector_submit, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show()            }
+//        client.newCall(request).enqueue(object:Callback{
+//            override fun onFailure(call: Call?, e: IOException) {
+//                Snackbar.make(selector_submit, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show()            }
+//
+//            override fun onResponse(call: Call?, response: Response) {
+                val db = AppDatabase.getDatabase(this@PopoverComuteSelector)
 
-            override fun onResponse(call: Call?, response: Response) {
 
-
-//        val response = client.newCall(request).execute()
+        val response = client.newCall(request).execute()
         val out = response.body()?.string()
 //        Log.d(TAG, out)
         val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
         var timePassed = 0
         var timeElapsed = 0
 //        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
-        for (step in steps) {
-            val elapsed = step.getJSONObject("duration").getInt("value")
-            timePassed += elapsed
-            timeElapsed += elapsed
+                try {
+                    for (step in steps) {
+                        val elapsed = step.getJSONObject("duration").getInt("value")
+                        timePassed += elapsed
+                        timeElapsed += elapsed
 
-            if (timePassed > weatherPointResolutionSeconds) {
+                        if (timePassed > weatherPointResolutionSeconds) {
 
-                timePassed = 0
-                val end = step.getJSONObject("end_location")
-//                Log.d(TAG,"$step , $end")
-                db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), timeElapsed, dest.id!!))
-            }
-        }
-            }
+                            timePassed = 0
+                            val end = step.getJSONObject("end_location")
+                Log.d(TAG,"step $step , end $end , elapsed $timeElapsed \n id $dest")
+                            db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), timeElapsed, dest.id!!))
+                        }
+                    }
+                    done()
 
-        })
+                }catch (e:Exception ){
+                    Snackbar.make(selector_submit, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show()
+                    e.printStackTrace()
+                }
+//            }
+
+//        })
     }
 }
