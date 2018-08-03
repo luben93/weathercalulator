@@ -40,7 +40,7 @@ class MyService : IntentService("myService") {
         fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
             val me = MyService()
             me.db = AppDatabase.getDatabase(context)
-            return me.getWeatherView(dest,!dest.comuteStartIntervalStart.IsToday())//todo needs to handle both wraparound and sameday
+            return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
 
         }
         var widget: NewAppWidget? = null
@@ -309,8 +309,8 @@ class MyService : IntentService("myService") {
 //        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
 //        val pair = Pair(closest,launchtime<Date().time)
 //            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
-        val today = closest.comuteStartIntervalStart.IsToday()
-        viewModel = getWeatherView(closest,!today,today)//todo if past launch time but still upcomming ??????????
+
+        viewModel = getWeatherView(closest,true)//todo if past launch time but still upcomming ??????????
 //        }
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
@@ -330,7 +330,7 @@ class MyService : IntentService("myService") {
         return db.destinationDao().getAll()
     }
 
-    fun getWeatherView(dest: Destination,wrappedAround:Boolean=false,launchOrNow:Boolean=false): List<WeatherView> {
+    fun getWeatherView(dest: Destination,launchOrNow:Boolean=false): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
         val timeSinceZeroZero:Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
@@ -341,16 +341,20 @@ class MyService : IntentService("myService") {
         EpochToZeroZero.set(Calendar.SECOND, 0)
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
 
-//        Log.d(TAG,"sinceEpochMs ${EpochToZeroZero.timeInMillis}")
-//        Log.d(TAG,"timeZZ $timeSinceZeroZero")
+
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
 //        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
-        val t = (if(launchOrNow && dest.comuteStartIntervalStart < timeSinceZeroZero)   timeSinceZeroZero + EpochToZeroZero.timeInMillis else launchTimeEpoch)
-//        val pair = Pair(dest, wrappedAround)
+//        val t = (if(launchOrNow && dest.comuteStartIntervalStart < timeSinceZeroZero)   timeSinceZeroZero + EpochToZeroZero.timeInMillis else launchTimeEpoch)
+        var t =  launchTimeEpoch
+        if(!launchOrNow) {
+            t += if(dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
+        }else{
+            t = if(dest.comuteStartIntervalStart<timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t
+        }
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
             //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
-            var time = t + (it.timeElapsed * 1000) + if(wrappedAround&&dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
+            var time = t + (it.timeElapsed * 1000)
 //            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
 //                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
 //                time = (  t + 86400000 + (it.timeElapsed * 1000))
