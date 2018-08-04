@@ -128,37 +128,6 @@ class MyService : IntentService("myService") {
         }
     }
 
-    @SuppressLint("MissingPermission")//todo add permission question
-    internal fun getRouteToDestination(dest: Destination) {
-//        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-
-        val mode = "bicycling"
-        var request = Request.Builder()//todo https://www.graphhopper.com/
-                .url("https://maps.googleapis.com/maps/api/directions/json?origin=${dest.fromLat.toString() + "," + dest.fromLon}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
-                .build()
-        val response = client.newCall(request).execute()
-        val out = response.body()?.string()
-//        Log.d(TAG, out)
-        val steps = JSONObject(out).getJSONArray("routes").getJSONObject(0).getJSONArray("legs").getJSONObject(0).getJSONArray("steps")
-        var timePassed = 0
-        var timeElapsed = 0
-//        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
-        for (step in steps) {
-            val elapsed = step.getJSONObject("duration").getInt("value")
-            timePassed += elapsed
-            timeElapsed += elapsed
-
-            if (timePassed > weatherPointResolutionSeconds) {
-
-                timePassed = 0
-                val end = step.getJSONObject("end_location")
-//                Log.d(TAG,"$step , $end")
-                db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), timeElapsed, dest.id!!))
-            }
-        }
-
-    }
-
 
     inner class LocalBinder : Binder() {
         /**
@@ -167,24 +136,6 @@ class MyService : IntentService("myService") {
         val service: MyService
             get() = this@MyService
     }
-
-    @SuppressLint("MissingPermission")
-    fun addComuteDestination(dest: Place, currentLocation: Place, interval: Pair<Long, Long>) {
-        doAsync {
-            //            val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            Log.d(TAG, "$dest $currentLocation")
-            var destination = Destination(dest.latLng.latitude, dest.latLng.longitude, currentLocation.latLng.latitude, currentLocation.latLng.longitude, interval.first, interval.second)
-            val id = db.destinationDao().insert(destination)
-            destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(currentLocation.latLng.latitude, currentLocation.latLng.longitude, 1, destination.id!!))//also ugly
-            db.routeStepDao().insertAll(RouteStep(dest.latLng.latitude, dest.latLng.longitude, 1, destination.id!!))//ugly
-            getRouteToDestination(destination)
-
-        }
-    }
-
-
 
 
     fun doUpdate() {
@@ -279,39 +230,12 @@ class MyService : IntentService("myService") {
         val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
         viewModel = listOf()
 
-//        val geo = Geocoder(this@MyService) //get time elpased since 00.00 today
-//        val c = Calendar.getInstance() // today
-//        c.timeZone = TimeZone.getTimeZone("UTC") // comment out for local system current timezone
-//
-//        c.set(Calendar.HOUR, 0)
-//        c.set(Calendar.MINUTE, 0)
-//        c.set(Calendar.SECOND, 0)
-//        c.set(Calendar.MILLISECOND, 0)
-////        Log.d(TAG,db.weatherDao().getAll().toString())
-//        val millistamp = Date().time - c.timeInMillis
-        //setup done
-
-
-        //setting widget
-
 
         //main view model population loop
         Log.d(TAG, "gonna parse next route")
-//        Log.d(TAG, db.destinationDao().getAll().toString())
-
-//        val destination = db.destinationDao().getNext(millistamp)?:db.destinationDao().getNext(0)
-//                destination.let { pair ->
         val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
-//        val next = db.destinationDao().getNextWrapAround(millistamp)
-
-//        db.destinationDao().getNextWrapAround(millistamp)?.let { pair ->
-            //            Log.d(TAG, pair.toString())
-//        val launchtime = closest!!.comuteStartIntervalStart + c.timeInMillis
-//        val pair = Pair(closest,launchtime<Date().time)
-//            viewModel = getWeatherView(pair.first!!, pair.second, c.timeInMillis)
 
         viewModel = getWeatherView(closest,true)//todo if past launch time but still upcomming ??????????
-//        }
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
@@ -323,11 +247,6 @@ class MyService : IntentService("myService") {
         //sending full data to app view
 //        Log.d(TAG, "gonna send intent")
         LocalBroadcastManager.getInstance(this).sendBroadcast(viewModelUpdated)
-//        return data
-    }
-
-    fun returnListOfDestinations(): List<Destination> {
-        return db.destinationDao().getAll()
     }
 
     fun getWeatherView(dest: Destination,launchOrNow:Boolean=false): List<WeatherView> {
@@ -343,8 +262,6 @@ class MyService : IntentService("myService") {
 
 
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-//        val wrappedAround = dest.comuteStartIntervalStart<timeSinceZeroZero //todo needs to check if this is next and if origin if closest, even after start is greater current time should not wraparound
-//        val t = (if(launchOrNow && dest.comuteStartIntervalStart < timeSinceZeroZero)   timeSinceZeroZero + EpochToZeroZero.timeInMillis else launchTimeEpoch)
         var t =  launchTimeEpoch
         if(!launchOrNow) {
             t += if(dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
@@ -353,16 +270,9 @@ class MyService : IntentService("myService") {
         }
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
-            //                val nowPlusStartInterval = pair.comuteStartIntervalStart + now + (it.timeElapsed * 1000)
             var time = t + (it.timeElapsed * 1000)
-//            if (wrappedAround) {//didWraparound //todo this is horribly broken,maybe not anymore
-//                Log.d(TAG, "did wraparound ${dest.comuteStartIntervalStart}  ")
-//                time = (  t + 86400000 + (it.timeElapsed * 1000))
 //                //todo add weekend support
-//            }
             println(time)
-//                var now =  Date().time + (it.timeElapsed * 1000)
-//                val time = pair.comuteStartIntervalStart + Date().time + (it.timeElapsed * 1000)
             db.weatherDao().getNextFromRoute(it.id!!, time)?.let { nextWeather ->
                 Log.d(TAG, "pre create weatherview $it,$nextWeather  $time")
 
