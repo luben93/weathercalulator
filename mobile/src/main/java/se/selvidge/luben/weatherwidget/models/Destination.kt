@@ -26,7 +26,7 @@ interface DestinationDao{
     fun getAll(): List<Destination>
 
     //todo maybe get next starting instead
-    @Query("SELECT * FROM destination WHERE comuteStartIntervalStart > :time-1800000  LIMIT 1")
+    @Query("SELECT * FROM destination WHERE comuteStartIntervalStart > :time  LIMIT 1")
     fun getNext(time: Long): Destination?
 
 
