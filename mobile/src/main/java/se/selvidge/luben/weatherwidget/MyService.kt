@@ -236,7 +236,7 @@ class MyService : IntentService("myService") {
         val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
         val nextOne = db.destinationDao().getNext(closest.comuteStartIntervalStart)!!
 
-        viewModel = getWeatherView(closest,Date().time<nextOne.comuteStartIntervalStart)//todo if past launch time but still upcomming ??????????
+        viewModel = getWeatherView(closest,true) //Date().time<nextOne.comuteStartIntervalStart)//todo if past launch time but still upcomming ??????????
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
