@@ -227,7 +227,14 @@ class MyService : IntentService("myService") {
                 .applicationContext)
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        var currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+        for(provider in locationManager.getProviders(true)){
+             val newLoc = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+            if(newLoc != null ){
+                currentLocation = newLoc
+            }
+        }
+
         viewModel = listOf()
 
 

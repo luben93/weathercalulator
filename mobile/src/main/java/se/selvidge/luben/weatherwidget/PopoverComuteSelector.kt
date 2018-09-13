@@ -65,7 +65,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         setContentView(R.layout.comute_selector)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        val currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
         val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
         origin.setText(location.thoroughfare)
