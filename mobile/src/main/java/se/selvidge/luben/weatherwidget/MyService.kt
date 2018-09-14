@@ -1,17 +1,20 @@
 package se.selvidge.luben.weatherwidget
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.IntentService
 import android.appwidget.AppWidgetManager
 import android.content.*
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteConstraintException
+import android.location.Location
 import android.location.LocationManager
 import android.os.Binder
 import android.os.IBinder
+import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
-import com.google.android.gms.location.places.Place
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
@@ -43,10 +46,34 @@ class MyService : IntentService("myService") {
             return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
 
         }
+        fun getPlace(thisActivity:Context,locationManager: LocationManager): Location? {
+            if (ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                var currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                for (provider in locationManager.getProviders(true)) {
+                    val newLoc = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+
+                    if (newLoc != null) {
+                        if (newLoc.hasAccuracy() && newLoc.accuracy < currentLocation.accuracy) {
+                            currentLocation = newLoc
+                        }
+                    }
+                }
+                return currentLocation
+            }
+//            ActivityCompat.requestPermissions(thisActivity,
+//                    arrayOf(Manifest.permission.READ_CONTACTS),
+//                    )
+
+            return null
+        }
         var widget: NewAppWidget? = null
         val syncAction = "NETWORK_SYNC"
         val updateViewAction = "VIEW_UPDATE"
         val halfHourInMs = 1800000
+        val hourInMs = halfHourInMs + halfHourInMs
         val TAG = "SERVICE"
         var now: Long = 0
             get() = Date().time
@@ -227,23 +254,30 @@ class MyService : IntentService("myService") {
                 .applicationContext)
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
-        var currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-        for(provider in locationManager.getProviders(true)){
-             val newLoc = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-            if(newLoc != null ){
-                currentLocation = newLoc
-            }
-        }
+        val currentLocation = getPlace(this,locationManager)
 
         viewModel = listOf()
 
 
         //main view model population loop
         Log.d(TAG, "gonna parse next route")
-        val closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
-        val nextOne = db.destinationDao().getNext(closest.comuteStartIntervalStart)!!
+        val closest:Destination
+        if (currentLocation != null) {
+             closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
+        }else {
+            closest = db.destinationDao().getNext(Date().time)!!
+        }
+        val midnigth = Calendar.getInstance()
+        midnigth.timeZone = TimeZone.getDefault()// comment out for local system current timezone
 
-        viewModel = getWeatherView(closest,true) //Date().time<nextOne.comuteStartIntervalStart)//todo if past launch time but still upcomming ??????????
+        midnigth.set(Calendar.HOUR_OF_DAY, 0)
+        midnigth.set(Calendar.MINUTE, 0)
+        midnigth.set(Calendar.SECOND, 0)
+        midnigth.set(Calendar.MILLISECOND, 0)
+
+        val a = closest.comuteStartIntervalStart < 12 * hourInMs
+        val b = Date().time - midnigth.timeInMillis < 12 * halfHourInMs
+        viewModel = getWeatherView(closest,a==b) //its not pretty but works for me
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
@@ -256,6 +290,8 @@ class MyService : IntentService("myService") {
 //        Log.d(TAG, "gonna send intent")
         LocalBroadcastManager.getInstance(this).sendBroadcast(viewModelUpdated)
     }
+
+
 
     fun getWeatherView(dest: Destination,launchOrNow:Boolean=false): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today

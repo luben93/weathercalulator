@@ -155,7 +155,6 @@ class MainActivity : AppCompatActivity() {
 
 }
 
-    @SuppressLint("MissingPermission")
     private fun dialogShower(){
         var display = windowManager.defaultDisplay
 //            var size = Point();
@@ -172,9 +171,9 @@ class MainActivity : AppCompatActivity() {
 //            val popWindow = PopupWindow(inflated, size.x - 50,size.y - 500, true );
 //
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+//        val currentLocation = MyService.getPlace(this, locationManager)
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
-        origin.setText(Geocoder(this).getFromLocation(currentLocation.latitude,currentLocation.longitude,1).first().thoroughfare)
+//        origin.setText(Geocoder(this).getFromLocation(currentLocation.latitude,currentLocation.longitude,1).first().thoroughfare)
         val time = TimePickerDialog(this,{ view,hour,minute -> timeStart = (hour*60*60 + minute*60)*1000L},1,1,true)
 
         dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {

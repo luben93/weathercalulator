@@ -65,11 +65,12 @@ class PopoverComuteSelector : AppCompatActivity() {
         setContentView(R.layout.comute_selector)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
-        val currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+        val currentLocation = MyService.getPlace(this, locationManager)
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
-        val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
-        origin.setText(location.thoroughfare)
-
+        if(currentLocation != null) {
+            val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
+            origin.setText(location.thoroughfare)
+        }
         //todo show time as button text and use current time as base
         val time = TimePickerDialog(this, { view, hour, minute ->
             time_picker.startAt(hour,minute)
