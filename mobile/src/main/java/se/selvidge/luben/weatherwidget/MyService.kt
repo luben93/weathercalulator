@@ -276,7 +276,7 @@ class MyService : IntentService("myService") {
         midnigth.set(Calendar.MILLISECOND, 0)
 
         val a = closest.comuteStartIntervalStart < 12 * hourInMs
-        val b = Date().time - midnigth.timeInMillis < 12 * halfHourInMs
+        val b = Date().time - midnigth.timeInMillis < 12 * hourInMs
         viewModel = getWeatherView(closest,a==b) //its not pretty but works for me
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
