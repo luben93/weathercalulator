@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 //        }
 //    }
     lateinit var myFragmentManager: FragmentManager
-    lateinit var adapter: CustomAdapter
+    lateinit var adapter: WeatherCardAdapter
 
 //    @SuppressLint("MissingPermission")
 //    @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
@@ -148,7 +148,7 @@ class MainActivity : AppCompatActivity() {
 
 
         val rView = findViewById<RecyclerView>(R.id.rView)
-    adapter = CustomAdapter(this@MainActivity, list)
+    adapter = WeatherCardAdapter(this@MainActivity, list)
         rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
         rView.adapter = adapter
 

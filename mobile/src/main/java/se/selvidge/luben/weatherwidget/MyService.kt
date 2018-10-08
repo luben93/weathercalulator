@@ -26,6 +26,7 @@ import se.selvidge.luben.weatherwidget.models.*
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 
 class MyService : IntentService("myService") {
@@ -280,10 +281,7 @@ class MyService : IntentService("myService") {
         viewModel = getWeatherView(closest,a==b) //its not pretty but works for me
 
         Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
-        views.setTextViewText(R.id.appwidget_text, viewModel.fold("") { acc, row ->
-            val out = acc + row.getPrettyToString(this@MyService)
-            out
-        })
+        views.setTextViewText(R.id.appwidget_text, viewModel.foldAndAvg(this@MyService))
         appWidgetManager.updateAppWidget(thisWidget, views)
 
         //sending full data to app view
@@ -336,6 +334,19 @@ class MyService : IntentService("myService") {
 
 }
 
+
+fun maxMinWW(tp:Double?,tm:Double?, ws:Double,wd:Int, rp:Double?,rm:Double?):String{
+    return "max-min T:${"%.1f".format(Locale.ENGLISH, tp)} - ${"%.1f".format(Locale.ENGLISH, tm)}℃ W: ${
+    "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd)/45)]} ${
+    if(rp==0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
+}
+
+//fun avgStdoWW(t:Double,to:Double,w:Double,wo:Double,wd:Int,r:Double,ro:Double):String{ //todo maybe use avg and stdOffset instead of max and min
+//    return "T:${"%.1f".format(Locale.ENGLISH, t)} - ${"%.1f".format(Locale.ENGLISH, to)}℃ W: ${
+//    "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd)/45)]} ${
+//    if(rp==0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
+//}
+
 fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
     val factor = (now.toDouble() - first().time.toDouble()) / (last().time.toDouble() - first().time.toDouble())
     val time = first().time.lerp(last().time, factor)
@@ -351,23 +362,25 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             dir, time)
 }
 
+fun List<WeatherView>.foldAndAvg(context:Context):String {
+   return fold("") { acc, data->acc+data.getPrettyToString(context)} + maxMinWW(
+            map { ww -> ww.weatherData.temp }.max(),
+            map { ww -> ww.weatherData.temp }.min(),
+            map { ww -> ww.weatherData.windSpeed }.average(),
+            map { ww -> ww.weatherData.windDirection }.average().roundToInt(),
+            map { ww -> ww.weatherData.rain }.max(),
+            map { ww -> ww.weatherData.rain }.min())
+}
+
 fun Pair<WeatherData, Any?>.first() = first
 fun Pair<Any?, WeatherData>.last() = second
 
 fun Double.lerp(high: Double, factor: Double): Double = this + (high - this).times(factor)
 
+fun Int.lerp(high: Int, factor: Double): Int = (this + (high - this).times(factor)).toInt()
 
-fun Int.lerp(high: Int, factor: Double): Int {
-    val out = (this + (high - this).times(factor)).toInt()
-//    Log.d(TAG, "lerp int: high $high factor $factor this $this out $out")
-    return out
-}
+fun Long.lerp(high: Long, factor: Double): Long  = (this + (high - this).times(factor)).toLong()
 
-fun Long.lerp(high: Long, factor: Double): Long {
-    val out = (this + (high - this).times(factor)).toLong()
-//    Log.d(TAG, "lerp long: high $high factor $factor this $this out $out")
-    return out
-}
 
 fun JSONArray.smhiValue(key: String): Number {
     for (JsonObject in this) {
