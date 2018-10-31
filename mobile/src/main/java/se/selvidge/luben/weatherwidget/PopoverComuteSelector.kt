@@ -40,7 +40,7 @@ import java.util.*
 class PopoverComuteSelector : AppCompatActivity() {
     //todo ability to init this with existing destination to edit
     companion object {
-        val TAG = "ComuteSelectorAct"
+        const val TAG = "ComuteSelectorAct"
     }
 
     val weatherPointResolutionSeconds = 1200
@@ -68,28 +68,17 @@ class PopoverComuteSelector : AppCompatActivity() {
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
         val currentLocation = MyService.getPlace(this, locationManager)
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
-        if(currentLocation != null) {
+        if (currentLocation != null) {
             val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
             origin.setText(location.thoroughfare)
-            originPlaceLatLng = LatLng(location.latitude,location.longitude)
+            originPlaceLatLng = LatLng(location.latitude, location.longitude)
         }
-        //todo show time as button text and use current time as base
         val time = TimePickerDialog(this, { view, hour, minute ->
-            time_picker.startAt(hour,minute)
+            time_picker.startAt(hour, minute)
             timeStart = (hour * 60 * 60 + minute * 60) * 1000L
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
 
-//        dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-//            override fun onPlaceSelected(place: Place) {
-//                Log.i(TAG, "dest: " + place.name)
-//                destPlace = place
-//
-//            }
-//
-//            override fun onError(status: Status) {
-//                Log.i(TAG, "dest An error occurred: $status")
-//            }
-//        })
+
 
         origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
@@ -118,26 +107,22 @@ class PopoverComuteSelector : AppCompatActivity() {
             Log.d(TAG, "submit to service $destPlaceLatLng $originPlaceLatLng $timeStart")
 
             //todo stop this activiy if succesful, and navigate back
-            doAsync {//todo add spinner
-               try{
-                   addDestination()                   //todo fails
-                } catch (e:Exception) {
+            doAsync {
+                //todo add spinner
+                try {
+                    addDestination()                   //todo fails
+                } catch (e: Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show()
-                   e.printStackTrace()
+                    e.printStackTrace()
                 }
             }
         }
-//            alert.setView(inflated)
-//            alert.setPositiveButton("Add"){dialogInterface, i ->
-//        popWindow.showAtLocation(inflated, Gravity.BOTTOM, 0,150);
-
 
         //todo add view setting for interval
-//            }
-//            val dialog = alert.create()
 
-        time_picker.startAt(cal.get(Calendar.HOUR_OF_DAY),cal.get(Calendar.MINUTE))
+
+        time_picker.startAt(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
         time_picker.setOnClickListener {
             time.show()
         }
@@ -148,39 +133,34 @@ class PopoverComuteSelector : AppCompatActivity() {
 //                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
 
-            //
             override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
-//
+
             }
         })
 
-
-//            dialog.show()
-//        return inflated
 
     }
 
     internal fun addDestination() {
 
 
-            val db = AppDatabase.getDatabase(this)
+        val db = AppDatabase.getDatabase(this)
 
-//            db.beginTransaction()
-            Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
-            var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
-            val id = db.destinationDao().insert(destination)
-            Log.d(TAG,"dest $destination  insert id $id")
-            destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
-            db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
-            getRouteToDestination(destination)
+        Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
+        var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
+        val id = db.destinationDao().insert(destination)
+        Log.d(TAG, "dest $destination  insert id $id")
+        destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
+        Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
+        db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
+        db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
+        getRouteToDestination(destination)
 
         done()
 
     }
 
-    internal fun done(){
+    internal fun done() {
         runOnUiThread {
             this@PopoverComuteSelector.finish()
         }
@@ -195,7 +175,7 @@ class PopoverComuteSelector : AppCompatActivity() {
                 .url("https://maps.googleapis.com/maps/api/directions/json?origin=${dest.fromLat.toString() + "," + dest.fromLon}&destination=${dest.lat.toString() + "," + dest.lon}&key=${getString(R.string.google_direction_key)}&mode=$mode")
                 .build()
 
-         val db = AppDatabase.getDatabase(this@PopoverComuteSelector)
+        val db = AppDatabase.getDatabase(this@PopoverComuteSelector)
 
 
         val response = client.newCall(request).execute()
@@ -206,19 +186,19 @@ class PopoverComuteSelector : AppCompatActivity() {
         var timeElapsed = 0
 //        var points = listOf(LatLng(currentLocation.latitude,currentLocation.longitude))
 //                try {
-                    for (step in steps) {//todo should use kilometers passed instead of time between steps
-                        val elapsed = step.getJSONObject("duration").getInt("value")
-                        timePassed += elapsed
-                        timeElapsed += elapsed
+        for (step in steps) {//todo should use kilometers passed instead of time between steps
+            val elapsed = step.getJSONObject("duration").getInt("value")
+            timePassed += elapsed
+            timeElapsed += elapsed
 
-                        if (timePassed > weatherPointResolutionSeconds) {
+            if (timePassed > weatherPointResolutionSeconds) {
 
-                            timePassed = 0
-                            val end = step.getJSONObject("end_location")
-                Log.d(TAG,"step $step , end $end , elapsed $timeElapsed \n id $dest")
-                            db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), timeElapsed, dest.id!!))
-                        }
-                    }
+                timePassed = 0
+                val end = step.getJSONObject("end_location")
+                Log.d(TAG, "step $step , end $end , elapsed $timeElapsed \n id $dest")
+                db.routeStepDao().insertAll(RouteStep(end.getDouble("lat"), end.getDouble("lng"), timeElapsed, dest.id!!))
+            }
+        }
 
 //                }catch (e:Exception ){
 //                    Snackbar.make(selector_submit, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
@@ -229,6 +209,6 @@ class PopoverComuteSelector : AppCompatActivity() {
 }
 
 
-fun TextView.startAt(hour: Int,minute: Int){
+fun TextView.startAt(hour: Int, minute: Int) {
     text = "launch time: ${hour}:${minute}"
 }

@@ -36,23 +36,20 @@ class MyService : IntentService("myService") {
     //maybe use Machine learning to train weather -> clothes model
 
     companion object {
-        fun getWeatherModel(context: Context) {
-//            return data
-            Log.d(TAG, "from static call")
-            context.sendBroadcast(Intent(context, MyService::class.java))
-        }
 
-        fun getWeatherView(dest: Destination,context: Context):List<WeatherView>{
+
+        fun getWeatherView(dest: Destination, context: Context): List<WeatherView> {
             val me = MyService()
             me.db = AppDatabase.getDatabase(context)
             return me.getWeatherView(dest)//todo needs to handle both wraparound and sameday
 
         }
-        fun getPlace(thisActivity:Context,locationManager: LocationManager): Location? {
+
+        fun getPlace(thisActivity: Context, locationManager: LocationManager): Location? {
             if (ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.ACCESS_COARSE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED &&
                     ContextCompat.checkSelfPermission(thisActivity, Manifest.permission.ACCESS_FINE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED) {
+                    == PackageManager.PERMISSION_GRANTED) {
                 var currentLocation = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 for (provider in locationManager.getProviders(true)) {
                     val newLoc = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
@@ -65,18 +62,16 @@ class MyService : IntentService("myService") {
                 }
                 return currentLocation
             }
-//            ActivityCompat.requestPermissions(thisActivity,
-//                    arrayOf(Manifest.permission.READ_CONTACTS),
-//                    )
 
             return null
         }
+
         var widget: NewAppWidget? = null
-        val syncAction = "NETWORK_SYNC"
-        val updateViewAction = "VIEW_UPDATE"
-        val halfHourInMs = 1800000
-        val hourInMs = halfHourInMs + halfHourInMs
-        val TAG = "SERVICE"
+        const val syncAction = "NETWORK_SYNC"
+        const val updateViewAction = "VIEW_UPDATE"
+        const val halfHourInMs = 1800000
+        const val hourInMs = halfHourInMs + halfHourInMs
+        const val TAG = "SERVICE"
         var now: Long = 0
             get() = Date().time
         var myself: MyService? = null
@@ -87,38 +82,25 @@ class MyService : IntentService("myService") {
     var client = OkHttpClient()
     var viewModel = listOf<WeatherView>()
     val viewModelUpdated = Intent(MainActivity.VIEW_MODEL_UPDATED)
-    val mBinder = LocalBinder()
-    val weatherPointResolutionKm = 2
-    val weatherPointResolutionSeconds = 1200
+
     lateinit var db: AppDatabase
 
 
-    override fun onBind(intent: Intent): IBinder {
-        return mBinder
-    }
-
-//    var reciverRegister = false
     var receiver = object : BroadcastReceiver() {
         override fun onReceive(broadcastContext: Context, broadcastIntent: Intent) {
-//    override fun onHandleIntent(broadcastIntent: Intent) {
-//        val broadcastContext = this
-            Log.d(TAG,"broadcastContext = [${broadcastContext}], broadcastIntent = [${broadcastIntent}]")
-        broadcastContext.startService(broadcastIntent)
-//            doUpdate()
+            Log.d(TAG, "broadcastContext = [${broadcastContext}], broadcastIntent = [${broadcastIntent}]")
+            broadcastContext.startService(broadcastIntent)
         }
 
     }
 
     override fun onDestroy() {
-////
         super.onDestroy()//todo either unregister when done or create a background serivce, maybe solved
-        try{
+        try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
             unregisterReceiver(receiver)
 
-//            LocalBroadcastManager.getInstance(this).unregisterReceiver(alarmed);
-////            reciverRegister =false
-        }catch(e:IllegalArgumentException){
+        } catch (e: IllegalArgumentException) {
             e.printStackTrace()
         }
     }
@@ -131,27 +113,27 @@ class MyService : IntentService("myService") {
                 updateViewAction -> myself?.updateViews()
                 Intent.ACTION_BOOT_COMPLETED -> Log.d(TAG, "did boot")
             }
-        }catch (e:Throwable){
+        } catch (e: Throwable) {
             Rollbar.instance().error(e)
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        try{
-        Log.d(TAG, "on create")
-        myself = this
-        val context = this
+        try {
+            Log.d(TAG, "on create")
+            myself = this
+            val context = this
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
-            addAction(syncAction)
-            addAction(updateViewAction)
-            addAction(Intent.ACTION_BOOT_COMPLETED)
-        })
+            LocalBroadcastManager.getInstance(this).registerReceiver(receiver, IntentFilter().apply {
+                addAction(syncAction)
+                addAction(updateViewAction)
+                addAction(Intent.ACTION_BOOT_COMPLETED)
+            })
 
-        db = AppDatabase.getDatabase(context)
+            db = AppDatabase.getDatabase(context)
 
-        }catch (e:Throwable){
+        } catch (e: Throwable) {
             Rollbar.instance().error(e)
         }
     }
@@ -166,22 +148,13 @@ class MyService : IntentService("myService") {
     }
 
 
-    inner class LocalBinder : Binder() {
-        /**
-         * @return the securedService instance
-         */
-        val service: MyService
-            get() = this@MyService
-    }
-
-
     fun doUpdate() {
         Log.d(TAG, "gonna update")
 
         doAsync {
             try {
 //                data = ""
-                db.weatherDao().getPastDate(Date().time-864000).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
+                db.weatherDao().getPastDate(Date().time - 864000).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
                 db.destinationDao().getAll().forEach {
                     db.routeStepDao().getAllFromDestination(it.id!!).forEach { loc -> getWeatherJson(loc, Date()) }
                 }
@@ -190,7 +163,6 @@ class MyService : IntentService("myService") {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-//        return data
         }
     }
 
@@ -264,17 +236,17 @@ class MyService : IntentService("myService") {
                 .applicationContext)
         val views = RemoteViews(this.applicationContext.packageName, R.layout.new_app_widget)
         val thisWidget = ComponentName(this, NewAppWidget::class.java)
-        val currentLocation = getPlace(this,locationManager)
+        val currentLocation = getPlace(this, locationManager)
 
         viewModel = listOf()
 
 
         //main view model population loop
         Log.d(TAG, "gonna parse next route")
-        val closest:Destination
+        val closest: Destination
         if (currentLocation != null) {
-             closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude,currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
-        }else {
+            closest = db.destinationDao().getClosetsOrigin(currentLocation.latitude, currentLocation.longitude)!!//todo either this or fix next wrap, closest seems to be working
+        } else {
             closest = db.destinationDao().getNext(Date().time)!!
         }
 
@@ -288,9 +260,9 @@ class MyService : IntentService("myService") {
 
         val a = closest.comuteStartIntervalStart < 12 * hourInMs
         val b = Date().time - midnigth.timeInMillis < 12 * hourInMs
-        viewModel = getWeatherView(closest,a==b) //its not pretty but works for me
+        viewModel = getWeatherView(closest, a == b) //its not pretty but works for me
 
-        Log.d(TAG,"close $closest \nnext NaNaNaNa batman")
+        Log.d(TAG, "close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text, viewModel.foldAndAvg(this@MyService))
         appWidgetManager.updateAppWidget(thisWidget, views)
 
@@ -300,12 +272,11 @@ class MyService : IntentService("myService") {
     }
 
 
-
-    fun getWeatherView(dest: Destination,launchOrNow:Boolean=false): List<WeatherView> {
+    fun getWeatherView(dest: Destination, launchOrNow: Boolean = false): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
-        val timeSinceZeroZero:Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
-                +EpochToZeroZero.get(Calendar.SECOND)) * 1000L + EpochToZeroZero.get(Calendar.MILLISECOND)
+        val timeSinceZeroZero: Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
+                + EpochToZeroZero.get(Calendar.SECOND)) * 1000L + EpochToZeroZero.get(Calendar.MILLISECOND)
 
         EpochToZeroZero.set(Calendar.HOUR_OF_DAY, 0)
         EpochToZeroZero.set(Calendar.MINUTE, 0)
@@ -314,11 +285,11 @@ class MyService : IntentService("myService") {
 
 
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        var t =  launchTimeEpoch
-        if(!launchOrNow) {
-            t += if(dest.comuteStartIntervalStart<timeSinceZeroZero) 86400000 else 0
-        }else{
-            t = if(dest.comuteStartIntervalStart<timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t //todo kl 19 man borde få morgondagens route så visas vad de skulle bli om man startar kl 19
+        var t = launchTimeEpoch
+        if (!launchOrNow) {
+            t += if (dest.comuteStartIntervalStart < timeSinceZeroZero) 86400000 else 0
+        } else {
+            t = if (dest.comuteStartIntervalStart < timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t //todo kl 19 man borde få morgondagens route så visas vad de skulle bli om man startar kl 19
         }
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
@@ -329,7 +300,7 @@ class MyService : IntentService("myService") {
                 Log.d(TAG, "pre create weatherview $it,$nextWeather  $time")
 
                 db.weatherDao().getPrevFromRoute(it.id!!, time)?.let { prevWeather ->
-//                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
+                    //                    Log.d(TAG, "pre create weatherview $it,$nextWeather $prevWeather $time")
 //                    Log.d(TAG,"${db.weatherDao().getAll()}")
                     val weather = Pair(prevWeather, nextWeather).toWeatherData(time)
                     weather.let { it1 ->
@@ -345,10 +316,10 @@ class MyService : IntentService("myService") {
 }
 
 
-fun maxMinWW(tp:Double?,tm:Double?, ws:Double,wd:Int, rp:Double?,rm:Double?):String{
+fun maxMinWW(tp: Double?, tm: Double?, ws: Double, wd: Int, rp: Double?, rm: Double?): String {
     return "max-min T:${"%.1f".format(Locale.ENGLISH, tp)} - ${"%.1f".format(Locale.ENGLISH, tm)}℃ W: ${
-    "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd)/45)]} ${
-    if(rp==0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
+    "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd) / 45)]} ${
+    if (rp == 0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
 }
 
 //fun avgStdoWW(t:Double,to:Double,w:Double,wo:Double,wd:Int,r:Double,ro:Double):String{ //todo maybe use avg and stdOffset instead of max and min
@@ -372,8 +343,8 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             dir, time)
 }
 
-fun List<WeatherView>.foldAndAvg(context:Context):String {
-   return fold("") { acc, data->acc+data.getPrettyToString(context)} + maxMinWW(
+fun List<WeatherView>.foldAndAvg(context: Context): String {
+    return fold("") { acc, data -> acc + data.getPrettyToString(context) } + maxMinWW(
             map { ww -> ww.weatherData.temp }.max(),
             map { ww -> ww.weatherData.temp }.min(),
             map { ww -> ww.weatherData.windSpeed }.average(),
@@ -389,7 +360,7 @@ fun Double.lerp(high: Double, factor: Double): Double = this + (high - this).tim
 
 fun Int.lerp(high: Int, factor: Double): Int = (this + (high - this).times(factor)).toInt()
 
-fun Long.lerp(high: Long, factor: Double): Long  = (this + (high - this).times(factor)).toLong()
+fun Long.lerp(high: Long, factor: Double): Long = (this + (high - this).times(factor)).toLong()
 
 
 fun JSONArray.smhiValue(key: String): Number {
@@ -427,7 +398,7 @@ fun RouteStepDao.updateOrInsert(input: RouteStep) {
 
 }
 
-fun Long.IsToday():Boolean{
+fun Long.IsToday(): Boolean {
     val cal = Calendar.getInstance()
     cal.timeZone = TimeZone.getDefault()// comment out for local system current timezone
 

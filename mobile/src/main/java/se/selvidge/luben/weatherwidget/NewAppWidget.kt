@@ -17,7 +17,7 @@ class NewAppWidget : AppWidgetProvider() {
     var data = "not fetched yet"
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         // There may be multiple widgets active, so update all of them
-        Log.d(TAG,"gonna do update")
+        Log.d(TAG, "gonna do update")
         MyService.widget = this
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
@@ -34,47 +34,28 @@ class NewAppWidget : AppWidgetProvider() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         super.onReceive(context, intent)
-        Log.d(TAG,"didrecive something")
+        Log.d(TAG, "didrecive something")
     }
 
 
+    fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
+                        appWidgetId: Int) {
 
-//    companion object {
-//        public var TAG = "CWIDGET"
+        // Construct the RemoteViews object
+        val views = RemoteViews(context.packageName, R.layout.new_app_widget)
+        views.setTextViewText(R.id.appwidget_text, "missing something")
 
-//        private var counter:Int = 0
+        val intent = Intent(context, MainActivity::class.java).apply { action = MainActivity.YOUR_AWESOME_ACTION }
 
-         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager,
-                                     appWidgetId: Int) {
-//            counter++
-             Log.d(TAG,"didrecive something")
+        val pendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
+        views.setOnClickPendingIntent(R.id.appwidget_text, pendingIntent)
 
-//            val widgetText = "${Calendar.getInstance().time.hours}:${Calendar.getInstance().time.minutes} \n ${MyService.getWeatherModel()}"
-//            val widgetText = counter.toString() + data
-            // Construct the RemoteViews object
-            val views = RemoteViews(context.packageName, R.layout.new_app_widget)
-            views.setTextViewText(R.id.appwidget_text, "missing something")
-//            MyService.getWeatherModel()
+        // Instruct the widget manager to update the widget
+        appWidgetManager.updateAppWidget(appWidgetId, views)
 
-//            val intent = Intent(context, MyService::class.java)//todone send intent to service
-            val intent = Intent(context, MainActivity::class.java).apply { action = MainActivity.YOUR_AWESOME_ACTION }
-//            val intent = Intent(context, this::class.java)
-//            intent.putExtra("key","hehe")
-//            intent.setAction(MainActivity::YOUR_AWESOME_ACTION.toString())
+        LocalBroadcastManager.getInstance(context).sendBroadcast(Intent(context, MyService::class.java).apply { action = MyService.updateViewAction })
 
-            val pendingIntent = PendingIntent.getActivity(context, 0, intent, 0)
-            views.setOnClickPendingIntent(R.id.appwidget_text,pendingIntent)
-
-            // Instruct the widget manager to update the widget
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-
-             LocalBroadcastManager.getInstance(context).sendBroadcast(Intent(context,MyService::class.java).apply { action = MyService.updateViewAction })
-
-         }
-
-
-//    }
-
+    }
 
 
 }
