@@ -15,6 +15,7 @@ import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
 import android.widget.RemoteViews
+import com.rollbar.android.Rollbar
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.anko.doAsync
@@ -123,15 +124,20 @@ class MyService : IntentService("myService") {
 
     override fun onHandleIntent(p0: Intent) {
         Log.d(TAG, "------------------------local-----------------------\nhandle intent, $p0")
-        when (p0.action) {
-            syncAction -> myself?.doUpdate()
-            updateViewAction -> myself?.updateViews()
-            Intent.ACTION_BOOT_COMPLETED -> Log.d(TAG,"did boot")
+        try {
+            when (p0.action) {
+                syncAction -> myself?.doUpdate()
+                updateViewAction -> myself?.updateViews()
+                Intent.ACTION_BOOT_COMPLETED -> Log.d(TAG, "did boot")
+            }
+        }catch (e:Throwable){
+            Rollbar.instance().error(e)
         }
     }
 
     override fun onCreate() {
         super.onCreate()
+        try{
         Log.d(TAG, "on create")
         myself = this
         val context = this
@@ -144,6 +150,9 @@ class MyService : IntentService("myService") {
 
         db = AppDatabase.getDatabase(context)
 
+        }catch (e:Throwable){
+            Rollbar.instance().error(e)
+        }
     }
 
     fun removeDestination(id: Destination) {
@@ -267,6 +276,7 @@ class MyService : IntentService("myService") {
         }else {
             closest = db.destinationDao().getNext(Date().time)!!
         }
+
         val midnigth = Calendar.getInstance()
         midnigth.timeZone = TimeZone.getDefault()// comment out for local system current timezone
 

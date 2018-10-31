@@ -22,6 +22,7 @@ import com.google.android.gms.location.places.Places
 import com.google.android.gms.location.places.internal.PlaceEntity
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
+import com.google.android.gms.maps.model.LatLng
 import com.touchboarder.weekdaysbuttons.WeekdaysDataItem
 import com.touchboarder.weekdaysbuttons.WeekdaysDataSource
 import kotlinx.android.synthetic.main.comute_selector.*
@@ -45,8 +46,8 @@ class PopoverComuteSelector : AppCompatActivity() {
     val weatherPointResolutionSeconds = 1200
 
 
-    lateinit var destPlace: Place
-    lateinit var originPlace: Place
+    lateinit var destPlaceLatLng: LatLng
+    lateinit var originPlaceLatLng: LatLng
     val cal = Calendar.getInstance()
 
 
@@ -70,6 +71,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         if(currentLocation != null) {
             val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
             origin.setText(location.thoroughfare)
+            originPlaceLatLng = LatLng(location.latitude,location.longitude)
         }
         //todo show time as button text and use current time as base
         val time = TimePickerDialog(this, { view, hour, minute ->
@@ -77,32 +79,43 @@ class PopoverComuteSelector : AppCompatActivity() {
             timeStart = (hour * 60 * 60 + minute * 60) * 1000L
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
 
-        dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-            override fun onPlaceSelected(place: Place) {
-                Log.i(TAG, "dest: " + place.name)
-                destPlace = place
-
-            }
-
-            override fun onError(status: Status) {
-                Log.i(TAG, "An error occurred: $status")
-            }
-        })
+//        dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+//            override fun onPlaceSelected(place: Place) {
+//                Log.i(TAG, "dest: " + place.name)
+//                destPlace = place
+//
+//            }
+//
+//            override fun onError(status: Status) {
+//                Log.i(TAG, "dest An error occurred: $status")
+//            }
+//        })
 
         origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
                 Log.i(TAG, "origin: " + place.name)
-                originPlace = place
+                originPlaceLatLng = place.latLng
             }
 
             override fun onError(status: Status) {
-                Log.i(TAG, "An error occurred: $status")
+                Log.i(TAG, "origin An error occurred: $status")
+            }
+        })
+
+        dest.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+            override fun onPlaceSelected(place: Place) {
+                Log.i(TAG, "origin: " + place.name)
+                destPlaceLatLng = place.latLng
+            }
+
+            override fun onError(status: Status) {
+                Log.i(TAG, "origin An error occurred: $status")
             }
         })
 
         selector_submit.setOnClickListener {
             //todo verify this
-            Log.d(TAG, "submit to service $destPlace $originPlace $timeStart")
+            Log.d(TAG, "submit to service $destPlaceLatLng $originPlaceLatLng $timeStart")
 
             //todo stop this activiy if succesful, and navigate back
             doAsync {//todo add spinner
@@ -153,14 +166,14 @@ class PopoverComuteSelector : AppCompatActivity() {
             val db = AppDatabase.getDatabase(this)
 
 //            db.beginTransaction()
-            Log.d(TAG, "gonna insert $destPlace $originPlace")
-            var destination = Destination(destPlace.latLng.latitude, destPlace.latLng.longitude, originPlace.latLng.latitude, originPlace.latLng.longitude, timeStart, 0)
+            Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
+            var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
             val id = db.destinationDao().insert(destination)
             Log.d(TAG,"dest $destination  insert id $id")
             destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
             Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
-            db.routeStepDao().insertAll(RouteStep(originPlace.latLng.latitude, originPlace.latLng.longitude, 1, destination.id!!))//also ugly
-            db.routeStepDao().insertAll(RouteStep(destPlace.latLng.latitude, destPlace.latLng.longitude, 1, destination.id!!))//ugly
+            db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
+            db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
             getRouteToDestination(destination)
 
         done()

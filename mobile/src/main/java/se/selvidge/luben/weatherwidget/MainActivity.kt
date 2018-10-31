@@ -26,6 +26,7 @@ import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.places.Place
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
+import com.rollbar.android.Rollbar
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.locationManager
@@ -65,29 +66,34 @@ class MainActivity : AppCompatActivity() {
 //    @RequiresApi(Build.VERSION_CODES.HONEYCOMB)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        setSupportActionBar(toolbar)
-        startService(Intent( this,MyService::class.java))
+        Rollbar.init(this)
+
+        try {
+
+
+            setContentView(R.layout.activity_main)
+            setSupportActionBar(toolbar)
+            startService(Intent(this, MyService::class.java))
 
 //        bindService(Intent(this, MyService::class.java), myServiceConnecetion, Context.BIND_AUTO_CREATE)
-     myFragmentManager = fragmentManager
+            myFragmentManager = fragmentManager
 
 
-    val alarmMgr = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    var intentSync = Intent(applicationContext, alarmed::class.java)
+            val alarmMgr = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            var intentSync = Intent(applicationContext, alarmed::class.java)
 
-    alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
-            AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + 10,
-            60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = MyService.updateViewAction }, 0))//todo verify that this runs
-    alarmMgr.setInexactRepeating(
-            AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + 100,//time since last
-            AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = MyService.syncAction }, 0))//todo verify that this runs
+            alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + 10,
+                    60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = MyService.updateViewAction }, 0))//todo verify that this runs
+            alarmMgr.setInexactRepeating(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    SystemClock.elapsedRealtime() + 100,//time since last
+                    AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = MyService.syncAction }, 0))//todo verify that this runs
 
-    add.setOnClickListener { view ->
-            Log.d(TAG,"gonna show picker")
-            startActivity(Intent(this,PopoverComuteSelector::class.java))
+            add.setOnClickListener { view ->
+                Log.d(TAG, "gonna show picker")
+                startActivity(Intent(this, PopoverComuteSelector::class.java))
 //            dialogShower()
 
 //        val fragmentTransaction = myFragmentManager.beginTransaction();
@@ -95,12 +101,12 @@ class MainActivity : AppCompatActivity() {
 ////        fragment.initInternalFragments(myFragmentManager,this)
 //        fragmentTransaction.add(R.id.fragment, fragment)
 //        fragmentTransaction.commit()
-        }
+            }
 
 
-        clock.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+            clock.setOnClickListener { view ->
+                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show()
 
 //            val intent = Intent(Intent.ACTION_RUN)
 //            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -108,26 +114,26 @@ class MainActivity : AppCompatActivity() {
 //            intent.putExtra("rideType","Ride")
 //            startActivity(intent)
 
-            val intent = Intent(this, MyService::class.java)
-            intent.action = MyService.syncAction
-            startService(intent)
+                val intent = Intent(this, MyService::class.java)
+                intent.action = MyService.syncAction
+                startService(intent)
 //    LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 //            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.syncAction })
 
-        }
+            }
 
 
-        recycle.setOnClickListener { view ->
-//            myService?.doAsyncPushToView()
-            startService(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
+            recycle.setOnClickListener { view ->
+                //            myService?.doAsyncPushToView()
+                startService(Intent(this, MyService::class.java).apply { action = MyService.updateViewAction })
 //            LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(this,MyService::class.java).apply { action = MyService.updateViewAction })
 
-        }
-        LocalBroadcastManager.getInstance(this)
-                .registerReceiver(broadCastReceiver, IntentFilter().apply {
-                    addAction(YOUR_AWESOME_ACTION)
-                    addAction(VIEW_MODEL_UPDATED)
-                })
+            }
+            LocalBroadcastManager.getInstance(this)
+                    .registerReceiver(broadCastReceiver, IntentFilter().apply {
+                        addAction(YOUR_AWESOME_ACTION)
+                        addAction(VIEW_MODEL_UPDATED)
+                    })
 //        registerReceiver(this, IntentFilter())
 
 
@@ -147,11 +153,13 @@ class MainActivity : AppCompatActivity() {
 //        })
 
 
-        val rView = findViewById<RecyclerView>(R.id.rView)
-    adapter = CustomAdapter(this@MainActivity, list)
-        rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
-        rView.adapter = adapter
-
+            val rView = findViewById<RecyclerView>(R.id.rView)
+            adapter = CustomAdapter(this@MainActivity, list)
+            rView.layoutManager = GridLayoutManager(this@MainActivity, 1)
+            rView.adapter = adapter
+        }catch (e:Throwable){
+            Rollbar.instance().error(e)
+        }
 
 }
 
@@ -276,7 +284,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateCards()
+        try {
+            updateCards()
+        }catch (e:Throwable){
+            Rollbar.instance().error(e)
+        }
     }
 
     fun updateCards() {
