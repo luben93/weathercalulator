@@ -28,7 +28,7 @@ data class WeatherView(val weatherData: WeatherData,val lat: Double,val lon:Doub
             weekday = SimpleDateFormat("EEE").format(weatherData.time) + " "
         }
         //todo if weather time is not today also show day
-        return "${weekday}${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
+        return "${weekday}${SimpleDateFormat("HH:mm").format(weatherData.time)} P:${name} T:${"%.1f".format(Locale.ENGLISH, weatherData.temp)}℃ ${wind} H: ${weatherData.humidity}% ${if(weatherData.rain==0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, weatherData.rain)} mm/h"}\n"
     }
 
     fun getPlace(c: Context): Address {

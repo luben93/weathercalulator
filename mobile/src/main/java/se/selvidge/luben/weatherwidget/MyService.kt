@@ -193,6 +193,7 @@ class MyService : IntentService("myService") {
                         step.id!!,
                         datarow.smhiValue("ws") as Double,
                         datarow.smhiValue("wd") as Int,
+                        datarow.smhiValue("r") as Int,
                         rowtime.time
 
                 )
@@ -316,8 +317,8 @@ class MyService : IntentService("myService") {
 }
 
 
-fun maxMinWW(tp: Double?, tm: Double?, ws: Double, wd: Int, rp: Double?, rm: Double?): String {
-    return "max-min T:${"%.1f".format(Locale.ENGLISH, tp)} - ${"%.1f".format(Locale.ENGLISH, tm)}℃ W: ${
+fun maxMinWW(tp: Double?, tm: Double?, ws: Double, wd: Int, rp: Double?, rm: Double?,hp:Int?,hm:Int?): String {
+    return "max-min T:${"%.1f".format(Locale.ENGLISH, tp)} - ${"%.1f".format(Locale.ENGLISH, tm)}℃ H: $hp-$hm% W: ${
     "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd) / 45)]} ${
     if (rp == 0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
 }
@@ -340,18 +341,21 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             first().routeId,
 //            first().lon,
             first().windSpeed.lerp(last().windSpeed, factor),
-            dir, time)
+            dir,
+            first().humidity.lerp(last().humidity,factor),
+            time)
 }
 
-fun List<WeatherView>.foldAndAvg(context: Context): String {
-    return fold("") { acc, data -> acc + data.getPrettyToString(context) } + maxMinWW(
+fun List<WeatherView>.foldAndAvg(context: Context): String = fold("") { acc, data -> acc + data.getPrettyToString(context) } + maxMinWW(
             map { ww -> ww.weatherData.temp }.max(),
             map { ww -> ww.weatherData.temp }.min(),
             map { ww -> ww.weatherData.windSpeed }.average(),
             map { ww -> ww.weatherData.windDirection }.average().roundToInt(),
             map { ww -> ww.weatherData.rain }.max(),
-            map { ww -> ww.weatherData.rain }.min())
-}
+            map { ww -> ww.weatherData.rain }.min(),
+            map { ww -> ww.weatherData.humidity }.max(),
+            map { ww -> ww.weatherData.humidity }.min())
+
 
 fun Pair<WeatherData, Any?>.first() = first
 fun Pair<Any?, WeatherData>.last() = second

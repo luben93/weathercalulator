@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 //import com.climesoft.designmaterial.R;
 
 
-class WeatherCardAdapter(private val context: Context, private val list: List<WeatherDestination>) : RecyclerView.Adapter<WeatherCardAdapter.ViewHolder>() {
+class WeatherCardAdapter(private val context: Context, private val list: MutableList<WeatherDestination>) : RecyclerView.Adapter<WeatherCardAdapter.ViewHolder>() {
     val geo = Geocoder(context)
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -43,8 +43,11 @@ class WeatherCardAdapter(private val context: Context, private val list: List<We
     override fun onBindViewHolder(holder: WeatherCardAdapter.ViewHolder, position: Int) {
         var weatherPositions = list[position]
         holder.titleTextView.text = geo.getFromLocation(weatherPositions.destination.lat, weatherPositions.destination.lon, 1).first().thoroughfare
-
-        holder.countTextView.text = weatherPositions.weatherDatas.foldAndAvg(context)
+        try {
+            holder.countTextView.text = weatherPositions.weatherDatas.foldAndAvg(context)
+        }catch (e:IllegalArgumentException){
+            //???
+        }
         Picasso.get().load("file:///android_asset/cloud.png").into(holder.thumbImageView) //todo better graphics
         holder.wholeCard.setOnClickListener { showPopupMenu(holder.thumbImageView, position) }
 
@@ -58,9 +61,13 @@ class WeatherCardAdapter(private val context: Context, private val list: List<We
         popup.setOnMenuItemClickListener {
             Log.d("ADAPTER", "adapter $it $view")
             MyService.myself?.removeDestination(list[pos].destination)
+            list.removeAt(pos)
+            notifyItemRemoved(pos)
+            notifyItemRangeChanged(pos, list.size)
             true
         }
         popup.show()
+
     }
 
     override fun getItemCount(): Int {
