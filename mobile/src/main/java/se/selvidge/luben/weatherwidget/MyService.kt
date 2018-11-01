@@ -230,7 +230,7 @@ class MyService : IntentService("myService") {
     }
 
     @SuppressLint("MissingPermission")
-    private fun updateViews() {
+    fun updateViews() {
 
         //widget
         val appWidgetManager = AppWidgetManager.getInstance(this
@@ -264,7 +264,7 @@ class MyService : IntentService("myService") {
         viewModel = getWeatherView(closest, a == b) //its not pretty but works for me
 
         Log.d(TAG, "close $closest \nnext NaNaNaNa batman")
-        views.setTextViewText(R.id.appwidget_text, viewModel.foldAndAvg(this@MyService))
+        views.setTextViewText(R.id.appwidget_text, "${Calendar.getInstance().get(Calendar.HOUR_OF_DAY)}:${Calendar.getInstance().get(Calendar.MINUTE)}   ${viewModel.foldAndAvg(this@MyService)}")
         appWidgetManager.updateAppWidget(thisWidget, views)
 
         //sending full data to app view
