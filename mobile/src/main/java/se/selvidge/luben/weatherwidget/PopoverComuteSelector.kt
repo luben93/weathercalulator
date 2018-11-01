@@ -153,7 +153,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
         Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
         db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
-        db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
+//        db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
         getRouteToDestination(destination)
 
         done()
