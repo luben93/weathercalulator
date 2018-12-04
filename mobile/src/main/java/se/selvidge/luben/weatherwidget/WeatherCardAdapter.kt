@@ -13,6 +13,8 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import com.squareup.picasso.Picasso
+import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.runOnUiThread
 import se.selvidge.luben.weatherwidget.models.*
 import java.lang.Appendable
 import java.util.*
@@ -44,7 +46,7 @@ class WeatherCardAdapter(private val context: Context, private val list: Mutable
         holder.titleTextView.text = geo.getFromLocation(weatherPositions.destination.lat, weatherPositions.destination.lon, 1).first().thoroughfare
         try {
             holder.countTextView.text = weatherPositions.weatherDatas.foldAndAvg(context)
-        }catch (e:IllegalArgumentException){
+        } catch (e: IllegalArgumentException) {
             //???
         }
         Picasso.get().load("file:///android_asset/cloud.png").into(holder.thumbImageView) //todo better graphics
@@ -58,11 +60,15 @@ class WeatherCardAdapter(private val context: Context, private val list: Mutable
         val inflater = popup.menuInflater
         inflater.inflate(R.menu.menu_main, popup.menu)
         popup.setOnMenuItemClickListener {
-            Log.d("ADAPTER", "adapter $it $view")
-            AppDatabase.getDatabase(context).destinationDao().delete(list[pos].destination)
-            list.removeAt(pos)
-            notifyItemRemoved(pos)
-            notifyItemRangeChanged(pos, list.size)
+            doAsync {
+                Log.d("ADAPTER", "adapter $it $view")
+                AppDatabase.getDatabase(context).destinationDao().delete(list[pos].destination)
+                list.removeAt(pos)
+                context.runOnUiThread {
+                    notifyItemRemoved(pos)
+                    notifyItemRangeChanged(pos, list.size)
+                }
+            }
             true
         }
         popup.show()
