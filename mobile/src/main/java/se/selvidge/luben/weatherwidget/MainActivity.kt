@@ -1,38 +1,24 @@
 package se.selvidge.luben.weatherwidget
 
-import android.annotation.SuppressLint
 import android.app.AlarmManager
-import android.app.FragmentManager
 import android.app.PendingIntent
-import android.app.TimePickerDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.location.Geocoder
-import android.location.LocationManager
 import android.os.Bundle
 import android.os.SystemClock
-import android.support.design.widget.Snackbar
 import android.support.v4.content.LocalBroadcastManager
-import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import com.google.android.gms.common.api.Status
-import com.google.android.gms.location.places.Place
-import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
-import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import com.rollbar.android.Rollbar
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.doAsync
-import org.jetbrains.anko.locationManager
 import se.selvidge.luben.weatherwidget.models.AppDatabase
-import se.selvidge.luben.weatherwidget.models.Destination
-import se.selvidge.luben.weatherwidget.models.RouteStep
 import se.selvidge.luben.weatherwidget.models.WeatherDestination
 import java.util.*
 
@@ -79,7 +65,7 @@ class MainActivity : AppCompatActivity() {
             }
 
 
-            clock.setOnClickListener { view ->
+            download.setOnClickListener { view ->
                 doAsync { bt.updateFromNetwork() }
             }
 
