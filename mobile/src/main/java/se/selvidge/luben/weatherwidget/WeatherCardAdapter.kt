@@ -13,9 +13,8 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import com.squareup.picasso.Picasso
-import se.selvidge.luben.weatherwidget.models.WeatherData
-import se.selvidge.luben.weatherwidget.models.WeatherDestination
-import se.selvidge.luben.weatherwidget.models.WeatherView
+import se.selvidge.luben.weatherwidget.models.*
+import java.lang.Appendable
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -60,7 +59,7 @@ class WeatherCardAdapter(private val context: Context, private val list: Mutable
         inflater.inflate(R.menu.menu_main, popup.menu)
         popup.setOnMenuItemClickListener {
             Log.d("ADAPTER", "adapter $it $view")
-            MyService.myself?.removeDestination(list[pos].destination)
+            AppDatabase.getDatabase(context).destinationDao().delete(list[pos].destination)
             list.removeAt(pos)
             notifyItemRemoved(pos)
             notifyItemRangeChanged(pos, list.size)

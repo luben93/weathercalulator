@@ -40,10 +40,12 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val YOUR_AWESOME_ACTION = "YourAwesomeAction"
         const val VIEW_MODEL_UPDATED = "VIEW_MODEL_UPDATED"
+        const val syncAction = "NETWORK_SYNC"
+        const val updateViewAction = "VIEW_UPDATE"
     }
 
     var list: ArrayList<WeatherDestination> = arrayListOf()
-
+    lateinit var bt: BackgroundTasks
     var TAG = "ACTIVITY"
     //TODO add options to select places for weather, kinda of done
 
@@ -54,10 +56,10 @@ class MainActivity : AppCompatActivity() {
         Rollbar.init(this)
 
         try {
-
+            bt = BackgroundTasks(this)
             setContentView(R.layout.activity_main)
             setSupportActionBar(toolbar)
-            startService(Intent(this, MyService::class.java))
+//            startService(Intent(this, MyService::class.java))
 
             val alarmMgr = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             var intentSync = Intent(applicationContext, alarmed::class.java)
@@ -65,11 +67,11 @@ class MainActivity : AppCompatActivity() {
             alarmMgr.setInexactRepeating(//todo only register once, this should work acoringly to interwebz
                     AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime() + 10,
-                    60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = MyService.updateViewAction }, 0))//todo verify that this runs
+                    60000, PendingIntent.getBroadcast(applicationContext, 1, intentSync.apply { action = updateViewAction }, 0))//todo verify that this runs
             alarmMgr.setInexactRepeating(
                     AlarmManager.ELAPSED_REALTIME_WAKEUP,
                     SystemClock.elapsedRealtime() + 100,//time since last
-                    AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = MyService.syncAction }, 0))//todo verify that this runs
+                    AlarmManager.INTERVAL_HOUR, PendingIntent.getBroadcast(applicationContext, 2, intentSync.apply { action = syncAction }, 0))//todo verify that this runs
 
             add.setOnClickListener { view ->
                 Log.d(TAG, "gonna show picker")
@@ -78,14 +80,11 @@ class MainActivity : AppCompatActivity() {
 
 
             clock.setOnClickListener { view ->
-                val intent = Intent(this, MyService::class.java)
-                intent.action = MyService.syncAction
-                startService(intent)
+                doAsync { bt.updateFromNetwork() }
             }
 
             recycle.setOnClickListener { view ->
-                startService(Intent(this, MyService::class.java).apply { action = MyService.updateViewAction })
-
+                doAsync { bt.updateViews() }
             }
 
             LocalBroadcastManager.getInstance(this)
@@ -108,7 +107,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPostResume() {
         super.onPostResume()
         Log.d(TAG, "app did resume")
-        startService(Intent(this, MyService::class.java).apply { action = MyService.updateViewAction })
+        doAsync { bt.updateViews() }
 
     }
 
@@ -146,7 +145,7 @@ class MainActivity : AppCompatActivity() {
         doAsync {
             //            var list = listOf<WeatherDestination>()
             AppDatabase.getDatabase(this@MainActivity).destinationDao().getAll().forEach { dest ->
-                MyService.getWeatherView(dest, this@MainActivity).let {
+                BackgroundTasks(this@MainActivity).getWeatherView(dest).let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
                         //                        Log.d(TAG, "$list")

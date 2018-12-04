@@ -58,19 +58,7 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".MyService"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"></action>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="se.selvidge.luben.weatherwidget.MyService.updateViewAction" />
-                <action android:name="se.selvidge.luben.weatherwidget.MyService.syncAction" />
 
-            </intent-filter>
-
-        </service>
     </application>
 
 </manifest>

@@ -18,7 +18,7 @@ class NewAppWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         // There may be multiple widgets active, so update all of them
         Log.d(TAG, "gonna do update")
-        MyService.widget = this
+
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
@@ -53,7 +53,7 @@ class NewAppWidget : AppWidgetProvider() {
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views)
 
-        LocalBroadcastManager.getInstance(context).sendBroadcast(Intent(context, MyService::class.java).apply { action = MyService.updateViewAction })
+        LocalBroadcastManager.getInstance(context).sendBroadcast(Intent(context, alarmed::class.java).apply { action = MainActivity.updateViewAction })
 
     }
 

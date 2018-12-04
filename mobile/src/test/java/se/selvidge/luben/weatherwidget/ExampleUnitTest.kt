@@ -34,7 +34,6 @@ class ExampleUnitTest {
     }
 
     lateinit var mDb:AppDatabase
-    lateinit var service:MyService
     lateinit var context: Context
     lateinit var EpochToZeroZero:Calendar
     var timeSinceZeroZero:Long =0
@@ -45,8 +44,6 @@ class ExampleUnitTest {
         context = RuntimeEnvironment.application
 
         mDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        service=MyService()
-        service.db = mDb
         EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
 
@@ -81,7 +78,7 @@ class ExampleUnitTest {
             var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1, launchTimeEpoch-1700000)
             var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+1700000)
             mDb.weatherDao().insertAll(weatherData,weatherData2)
-            back= service.getWeatherView(dest).first()
+            back= BackgroundTasks(context).getWeatherView(dest).first()
         }.apply { start() }.join()
 
         assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1, launchTimeEpoch+2000),59.3283,17.9699)),back)
@@ -118,7 +115,7 @@ class ExampleUnitTest {
             var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+(timediff/2))
             mDb.weatherDao().insertAll(weatherData,weatherData2)
 //            println(mDb.weatherDao().getAll())
-            back= service.getWeatherView(dest,false).first()
+            back= BackgroundTasks(context).getWeatherView(dest,false).first()
         }.apply { start() }.join()
 
         val view =WeatherView(WeatherData(5.006669054188066, 0.0, 1,1.0013338108376133,  1, launchTimeEpoch+2000),59.3283,17.9699)
@@ -145,7 +142,7 @@ class ExampleUnitTest {
             var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1, launchTimeEpoch-1700000)
             var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+1700000)
             mDb.weatherDao().insertAll(weatherData,weatherData2)
-             back= service.getWeatherView(dest,true).first()
+             back= BackgroundTasks(context).getWeatherView(dest,true).first()
         }.apply { start() }.join()
         assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1, launchTimeEpoch+2000),59.3283,17.9699)),back)
 
