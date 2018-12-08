@@ -23,11 +23,13 @@ import com.google.android.gms.location.places.internal.PlaceEntity
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import com.google.android.gms.maps.model.LatLng
+import com.rollbar.android.Rollbar
 import com.touchboarder.weekdaysbuttons.WeekdaysDataItem
 import com.touchboarder.weekdaysbuttons.WeekdaysDataSource
 import kotlinx.android.synthetic.main.comute_selector.*
 import okhttp3.*
 import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.horizontalProgressBar
 import org.jetbrains.anko.locationManager
 import org.json.JSONObject
 import se.selvidge.luben.weatherwidget.models.AppDatabase
@@ -49,36 +51,64 @@ class PopoverComuteSelector : AppCompatActivity() {
     lateinit var destPlaceLatLng: LatLng
     lateinit var originPlaceLatLng: LatLng
     val cal = Calendar.getInstance()
+    val db = AppDatabase.getDatabase(this)
 
 
-    var timeStart: Long = (cal.get(Calendar.HOUR_OF_DAY) * 60 * 60 + cal.get(Calendar.MINUTE) * 60) * 1000L
+    private var _timeStart: Long = (cal.get(Calendar.HOUR_OF_DAY) * 60 * 60 + cal.get(Calendar.MINUTE) * 60) * 1000L
+    var timeStart: Long
+        get() = _timeStart
+        set(value) {
+            time_picker.text = "launch time: ${hour}:${minute}"
+            _timeStart = value
+        }
 
 
     @RequiresApi(Build.VERSION_CODES.M)
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
 
-
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "gonna show picker")
-
-
         setContentView(R.layout.comute_selector)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
-        val currentLocation = BackgroundTasks(this).getPlace()
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
-        if (currentLocation != null) {
-            val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
-            origin.setText(location.thoroughfare)
-            originPlaceLatLng = LatLng(location.latitude, location.longitude)
+        var hourMinute = Pair(cal.get(Calendar.HOUR_OF_DAY),cal.get(Calendar.MINUTE))
+
+        if(intent.extras != null) {
+
+
+            var dest = db.destinationDao().getById(intent.extras.getInt("destinationId"))
+        }else {
+
+            val currentLocation = BackgroundTasks(this).getPlace()
+            if (currentLocation != null) {
+                val location = Geocoder(this).getFromLocation(currentLocation.latitude, currentLocation.longitude, 1).first()
+                origin.setText(location.thoroughfare)
+                originPlaceLatLng = LatLng(location.latitude, location.longitude)
+            }
+
         }
+
         val time = TimePickerDialog(this, { view, hour, minute ->
             time_picker.startAt(hour, minute)
             timeStart = (hour * 60 * 60 + minute * 60) * 1000L
-        }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true)
+        }, hourMinute.first,hourMinute.second , true)
 
+        time_picker.startAt(hourMinute.first,hourMinute.second)
+        time_picker.setOnClickListener {
+            time.show()
+        }
 
+        val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
+        wds.start(object : WeekdaysDataSource.Callback {
+            override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
+//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
+
+            }
+        })
 
         origin.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
@@ -103,48 +133,23 @@ class PopoverComuteSelector : AppCompatActivity() {
         })
 
         selector_submit.setOnClickListener {
-            //todo verify this
-            Log.d(TAG, "submit to service $destPlaceLatLng $originPlaceLatLng $timeStart")
-
-            //todo stop this activiy if succesful, and navigate back
             doAsync {
-                //todo add spinner
                 try {
                     addDestination()                   //todo fails
                 } catch (e: Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show()
                     e.printStackTrace()
+                    Rollbar.instance().error(e)
+
                 }
             }
         }
-
-        //todo add view setting for interval
-
-
-        time_picker.startAt(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
-        time_picker.setOnClickListener {
-            time.show()
-        }
-
-        val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
-        wds.start(object : WeekdaysDataSource.Callback {
-            override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
-//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
-
-            }
-        })
-
-
     }
 
     internal fun addDestination() {
 
 
-        val db = AppDatabase.getDatabase(this)
 
         Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
         var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
@@ -153,7 +158,6 @@ class PopoverComuteSelector : AppCompatActivity() {
         destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
         Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
         db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
-//        db.routeStepDao().insertAll(RouteStep(destPlaceLatLng.latitude, destPlaceLatLng.longitude, 1, destination.id!!))//ugly
         getRouteToDestination(destination)
 
         done()
@@ -212,3 +216,5 @@ class PopoverComuteSelector : AppCompatActivity() {
 fun TextView.startAt(hour: Int, minute: Int) {
     text = "launch time: ${hour}:${minute}"
 }
+
+fun Long.getHourTodayFromEpoch():

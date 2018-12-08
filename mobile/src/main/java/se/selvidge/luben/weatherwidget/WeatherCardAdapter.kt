@@ -2,11 +2,13 @@ package se.selvidge.luben.weatherwidget
 
 
 import android.content.Context
+import android.content.Intent
 import android.location.Geocoder
 import android.support.v7.widget.CardView
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -56,22 +58,24 @@ class WeatherCardAdapter(private val context: Context, private val list: Mutable
 
     private fun showPopupMenu(view: View, pos: Int) {
         // inflate menu
-        val popup = PopupMenu(context, view)
-        val inflater = popup.menuInflater
-        inflater.inflate(R.menu.menu_main, popup.menu)
-        popup.setOnMenuItemClickListener {
-            doAsync {
-                Log.d("ADAPTER", "adapter $it $view")
-                AppDatabase.getDatabase(context).destinationDao().delete(list[pos].destination)
-                list.removeAt(pos)
-                context.runOnUiThread {
-                    notifyItemRemoved(pos)
-                    notifyItemRangeChanged(pos, list.size)
-                }
-            }
-            true
-        }
-        popup.show()
+//        val popup = PopupMenu(context, view)
+//        val inflater = popup.menuInflater
+//        inflater.inflate(R.menu.menu_main, popup.menu)
+//        popup.setOnMenuItemClickListener {
+//            doAsync {
+//                Log.d("ADAPTER", "adapter $it $view")
+//                AppDatabase.getDatabase(context).destinationDao().delete(list[pos].destination)
+//                list.removeAt(pos)
+//                context.runOnUiThread {
+//                    notifyItemRemoved(pos)
+//                    notifyItemRangeChanged(pos, list.size)
+//                }
+//            }
+//            true
+//        }
+//        popup.show()
+        context.startActivity(Intent(context, PopoverComuteSelector::class.java).apply { putExtra("destinationId",list[pos].destination.id)})
+
 
     }
 
