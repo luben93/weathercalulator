@@ -77,7 +77,10 @@ class PopoverComuteSelector : AppCompatActivity() {
         if(intent.extras != null) {
 
 
-            var dest = db.destinationDao().getById(intent.extras.getInt("destinationId"))
+            var destFromDb = db.destinationDao().getById(intent.extras.getInt("destinationId"))
+            //todo set dest and origin from db
+            //todo set time from db
+            //todo add delete button
         }else {
 
             val currentLocation = BackgroundTasks(this).getPlace()
@@ -135,7 +138,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         selector_submit.setOnClickListener {
             doAsync {
                 try {
-                    addDestination()                   //todo fails
+                    addDestination()                   //todo this should update or insert (or remove and insert)
                 } catch (e: Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show()
