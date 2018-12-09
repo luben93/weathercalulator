@@ -15,6 +15,7 @@ import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.widget.Button
 import android.widget.TextView
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.places.Place
@@ -31,6 +32,7 @@ import okhttp3.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.horizontalProgressBar
 import org.jetbrains.anko.locationManager
+import org.jetbrains.anko.sdk25.coroutines.onClick
 import org.json.JSONObject
 import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.Destination
@@ -54,13 +56,8 @@ class PopoverComuteSelector : AppCompatActivity() {
     val db = AppDatabase.getDatabase(this)
 
 
-    private var _timeStart: Long = (cal.get(Calendar.HOUR_OF_DAY) * 60 * 60 + cal.get(Calendar.MINUTE) * 60) * 1000L
-    var timeStart: Long
-        get() = _timeStart
-        set(value) {
-            time_picker.text = "launch time: ${hour}:${minute}"
-            _timeStart = value
-        }
+    private var timeStart: Long = (cal.get(Calendar.HOUR_OF_DAY) * 60 * 60 + cal.get(Calendar.MINUTE) * 60) * 1000L
+
 
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -73,14 +70,17 @@ class PopoverComuteSelector : AppCompatActivity() {
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
         var hourMinute = Pair(cal.get(Calendar.HOUR_OF_DAY),cal.get(Calendar.MINUTE))
-
+        var destFromDb:Destination? = null
         if(intent.extras != null) {
 
 
-            var destFromDb = db.destinationDao().getById(intent.extras.getInt("destinationId"))
+             destFromDb= db.destinationDao().getById(intent.extras.getInt("destinationId"))
             //todo set dest and origin from db
-            //todo set time from db
-            //todo add delete button
+            hourMinute = Pair((destFromDb.comuteStartIntervalStart/3600000).toInt(),(destFromDb.comuteStartIntervalStart/60000).toInt())
+            selector_buttons.addView(Button(this).apply { text = "delete "
+                setOnClickListener { doAsync  {  db.destinationDao().delete(destFromDb)
+                                    done()}
+                 }})
         }else {
 
             val currentLocation = BackgroundTasks(this).getPlace()
@@ -138,6 +138,9 @@ class PopoverComuteSelector : AppCompatActivity() {
         selector_submit.setOnClickListener {
             doAsync {
                 try {
+                    if(destFromDb != null ){
+                        db.destinationDao().delete(destFromDb)
+                    }
                     addDestination()                   //todo this should update or insert (or remove and insert)
                 } catch (e: Exception) {
                     Snackbar.make(it, "failed ${e.localizedMessage}", Snackbar.LENGTH_LONG)
@@ -148,18 +151,19 @@ class PopoverComuteSelector : AppCompatActivity() {
                 }
             }
         }
+
     }
 
     internal fun addDestination() {
 
 
 
-        Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
+            Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
         var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
         val id = db.destinationDao().insert(destination)
-        Log.d(TAG, "dest $destination  insert id $id")
+            Log.d(TAG, "dest $destination  insert id $id")
         destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey
-        Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
+            Log.d(TAG, "inserting dest $destination $id ${db.destinationDao().getAll()}")
         db.routeStepDao().insertAll(RouteStep(originPlaceLatLng.latitude, originPlaceLatLng.longitude, 1, destination.id!!))//also ugly
         getRouteToDestination(destination)
 
@@ -220,4 +224,3 @@ fun TextView.startAt(hour: Int, minute: Int) {
     text = "launch time: ${hour}:${minute}"
 }
 
-fun Long.getHourTodayFromEpoch():
