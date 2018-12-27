@@ -37,7 +37,7 @@ interface DestinationDao{
     fun insert(dest: Destination):Long
 
 
-    @Query("SELECT * FROM destination WHERE id = id")
+    @Query("SELECT * FROM destination WHERE id = :id")
     fun getById(id:Int): Destination
 
     @Update

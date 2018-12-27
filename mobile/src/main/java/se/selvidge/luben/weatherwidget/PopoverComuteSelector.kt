@@ -73,14 +73,30 @@ class PopoverComuteSelector : AppCompatActivity() {
         var destFromDb:Destination? = null
         if(intent.extras != null) {
 
+            doAsync {
+                destFromDb = db.destinationDao().getById(intent.extras.getInt("destinationId"))
+                //todo set dest and origin from db
+                val from = Geocoder(this@PopoverComuteSelector).getFromLocation(destFromDb!!.fromLat, destFromDb!!.fromLon, 1).first()
+                origin.setText(from.thoroughfare)
+                originPlaceLatLng = LatLng(from.latitude, from.longitude)
 
-             destFromDb= db.destinationDao().getById(intent.extras.getInt("destinationId"))
-            //todo set dest and origin from db
-            hourMinute = Pair((destFromDb.comuteStartIntervalStart/3600000).toInt(),(destFromDb.comuteStartIntervalStart/60000).toInt())
-            selector_buttons.addView(Button(this).apply { text = "delete "
-                setOnClickListener { doAsync  {  db.destinationDao().delete(destFromDb)
-                                    done()}
-                 }})
+                val to = Geocoder(this@PopoverComuteSelector).getFromLocation(destFromDb!!.lat, destFromDb!!.lon, 1).first()
+                dest.setText(to.thoroughfare)
+                destPlaceLatLng = LatLng(to.latitude, to.longitude)
+
+
+                hourMinute = Pair((destFromDb!!.comuteStartIntervalStart / 3600000).toInt(), (destFromDb!!.comuteStartIntervalStart / 600000).toInt())
+
+                selector_buttons.addView(Button(this@PopoverComuteSelector).apply {
+                    text = "delete "
+                    setOnClickListener {
+//                        doAsync {
+                            db.destinationDao().delete(destFromDb!!)
+                            done()
+//                        }
+                    }
+                })
+            }
         }else {
 
             val currentLocation = BackgroundTasks(this).getPlace()
@@ -139,7 +155,7 @@ class PopoverComuteSelector : AppCompatActivity() {
             doAsync {
                 try {
                     if(destFromDb != null ){
-                        db.destinationDao().delete(destFromDb)
+                        db.destinationDao().delete(destFromDb!!)
                     }
                     addDestination()                   //todo this should update or insert (or remove and insert)
                 } catch (e: Exception) {
