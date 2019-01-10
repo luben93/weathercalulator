@@ -2,15 +2,9 @@ package se.selvidge.luben.weatherwidget
 
 import android.annotation.SuppressLint
 import android.app.TimePickerDialog
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
 import android.location.Geocoder
-import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity
@@ -19,8 +13,6 @@ import android.widget.Button
 import android.widget.TextView
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.places.Place
-import com.google.android.gms.location.places.Places
-import com.google.android.gms.location.places.internal.PlaceEntity
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment
 import com.google.android.gms.location.places.ui.PlaceSelectionListener
 import com.google.android.gms.maps.model.LatLng
@@ -30,15 +22,10 @@ import com.touchboarder.weekdaysbuttons.WeekdaysDataSource
 import kotlinx.android.synthetic.main.comute_selector.*
 import okhttp3.*
 import org.jetbrains.anko.doAsync
-import org.jetbrains.anko.horizontalProgressBar
-import org.jetbrains.anko.locationManager
-import org.jetbrains.anko.sdk25.coroutines.onClick
 import org.json.JSONObject
 import se.selvidge.luben.weatherwidget.models.AppDatabase
 import se.selvidge.luben.weatherwidget.models.Destination
 import se.selvidge.luben.weatherwidget.models.RouteStep
-import java.io.IOException
-import java.sql.SQLException
 import java.util.*
 
 class PopoverComuteSelector : AppCompatActivity() {
@@ -52,6 +39,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 
     lateinit var destPlaceLatLng: LatLng
     lateinit var originPlaceLatLng: LatLng
+    var weekdays:ArrayList<WeekdaysDataItem>? = null
     val cal = Calendar.getInstance()
     val db = AppDatabase.getDatabase(this)
 
@@ -66,6 +54,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.comute_selector)
+        val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
@@ -83,6 +72,8 @@ class PopoverComuteSelector : AppCompatActivity() {
                 val to = Geocoder(this@PopoverComuteSelector).getFromLocation(destFromDb!!.lat, destFromDb!!.lon, 1).first()
                 dest.setText(to.thoroughfare)
                 destPlaceLatLng = LatLng(to.latitude, to.longitude)
+                destFromDb?.weekdays?.forEach {  wds.setSelectedDays(it) }
+
 
 
                 hourMinute = Pair((destFromDb!!.comuteStartIntervalStart / 3600000).toInt(), (destFromDb!!.comuteStartIntervalStart / 600000).toInt())
@@ -118,10 +109,11 @@ class PopoverComuteSelector : AppCompatActivity() {
             time.show()
         }
 
-        val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
         wds.start(object : WeekdaysDataSource.Callback {
             override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
 //                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                weekdays = p1
+
             }
 
             override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
@@ -175,7 +167,8 @@ class PopoverComuteSelector : AppCompatActivity() {
 
 
             Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
-        var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, timeStart, 0)
+        var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, (this.weekdays?.map { it.calendarDayId }
+                ?: listOf(1,2,3,4,5)).toIntArray(), timeStart, 0)
         val id = db.destinationDao().insert(destination)
             Log.d(TAG, "dest $destination  insert id $id")
         destination.id = id.toInt()//todo ugly hack will not scale, and rowid != primarykey

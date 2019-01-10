@@ -3,10 +3,12 @@ package se.selvidge.luben.weatherwidget.models
 import android.arch.persistence.room.Database
 import android.arch.persistence.room.Room
 import android.arch.persistence.room.RoomDatabase
+import android.arch.persistence.room.TypeConverters
 import android.content.Context
 
 
-@Database(entities = arrayOf(WeatherData::class,Destination::class,RouteStep::class), version = 6)
+@Database(entities = arrayOf(WeatherData::class,Destination::class,RouteStep::class), version = 7)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun weatherDao(): WeatherDataDAO
     abstract fun destinationDao(): DestinationDao

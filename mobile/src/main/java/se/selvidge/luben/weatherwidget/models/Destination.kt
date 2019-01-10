@@ -1,6 +1,7 @@
 package se.selvidge.luben.weatherwidget.models
 
 import android.arch.persistence.room.*
+import com.touchboarder.weekdaysbuttons.WeekdaysDataSource
 
 @Entity//needs some uniqe check on places
 data class Destination(
@@ -8,12 +9,14 @@ data class Destination(
         var lon:Double,
         var fromLat:Double,
         var fromLon:Double,
+        var weekdays:IntArray,
         var comuteStartIntervalStart: Long,
         var comuteStartIntervalStop: Long) {
     @PrimaryKey(autoGenerate = true)
     var id:Int?=null
 
     override fun toString(): String {
+
         return "Destination(lat=$lat, lon=$lon, fromLat=$fromLat, fromLon=$fromLon, comuteStartIntervalStart=$comuteStartIntervalStart, comuteStartIntervalStop=$comuteStartIntervalStop, id=$id)"
     }
 
