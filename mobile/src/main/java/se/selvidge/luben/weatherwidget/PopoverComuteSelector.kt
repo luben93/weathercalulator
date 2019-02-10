@@ -76,15 +76,16 @@ class PopoverComuteSelector : AppCompatActivity() {
 
 
 
-                hourMinute = Pair((destFromDb!!.comuteStartIntervalStart / 3600000).toInt(), (destFromDb!!.comuteStartIntervalStart / 600000).toInt())
+
+                hourMinute = Pair((destFromDb!!.comuteStartIntervalStart / 3600000).toInt(), (destFromDb!!.comuteStartIntervalStart / 600000 % 60).toInt())
 
                 selector_buttons.addView(Button(this@PopoverComuteSelector).apply {
                     text = "delete "
                     setOnClickListener {
-//                        doAsync {
+                        doAsync {
                             db.destinationDao().delete(destFromDb!!)
                             done()
-//                        }
+                        }
                     }
                 })
             }

@@ -119,6 +119,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d(TAG,"did resume")
         try {
             updateCards()
         } catch (e: Throwable) {
@@ -134,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 BackgroundTasks(this@MainActivity).getWeatherView(dest).let {
                     list.add(WeatherDestination(it, dest))
                     runOnUiThread {
-                        //                        Log.d(TAG, "$list")
+                        Log.d(TAG, "$list")
                         adapter.notifyDataSetChanged()
                     }
                 }
