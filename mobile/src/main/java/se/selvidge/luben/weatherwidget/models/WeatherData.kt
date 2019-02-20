@@ -10,6 +10,7 @@ data class WeatherData(
     @ColumnInfo(name="route_id")
     var routeId:Int,
     var windSpeed:Double,
+    var gustWindSpeed:Double,
     var windDirection:Int,
     var humidity:Int,
     var time:Long

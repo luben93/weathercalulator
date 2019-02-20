@@ -68,6 +68,7 @@ class BackgroundTasks(val context: Context) {
                         datarow.smhiValue("pmax") as Double,
                         step.id!!,
                         datarow.smhiValue("ws") as Double,
+                        datarow.smhiValue("gust") as Double,
                         datarow.smhiValue("wd") as Int,
                         datarow.smhiValue("r") as Int,
                         rowtime.time
@@ -160,7 +161,9 @@ class BackgroundTasks(val context: Context) {
         viewModel = getWeatherView(closest, a == b) //its not pretty but works for me
 
         Log.d(TAG, "close $closest \nnext NaNaNaNa batman")
-        views.setTextViewText(R.id.appwidget_text, "${Calendar.getInstance().get(Calendar.HOUR_OF_DAY)}:${Calendar.getInstance().get(Calendar.MINUTE)}   ${viewModel.foldAndAvg(context)}")
+        views.setTextViewText(R.id.appwidget_text,
+                "${Calendar.getInstance().get(Calendar.HOUR_OF_DAY)}:${Calendar.getInstance().get(Calendar.MINUTE)} " +
+                        "  ${viewModel.foldAndAvg(context)}")
         appWidgetManager.updateAppWidget(thisWidget, views)
 
         //sending full data to app view
@@ -211,11 +214,7 @@ class BackgroundTasks(val context: Context) {
 }
 
 
-fun maxMinWW(tp: Double?, tm: Double?, ws: Double, wd: Int, rp: Double?, rm: Double?,hp:Int?,hm:Int?): String {
-    return "max-min T:${"%.1f".format(Locale.ENGLISH, tp)} - ${"%.1f".format(Locale.ENGLISH, tm)}℃ H: $hp-$hm% W: ${
-    "%.1f".format(Locale.ENGLISH, ws)} m/s ${WeatherView.dir.values()[((wd) / 45)]} ${
-    if (rp == 0.0 && rm == 0.0) "clear" else "${"%.1f".format(Locale.ENGLISH, rp)} - ${"%.1f".format(Locale.ENGLISH, rp)} mm/h"}\n"
-}
+
 
 //fun avgStdoWW(t:Double,to:Double,w:Double,wo:Double,wd:Int,r:Double,ro:Double):String{ //todo maybe use avg and stdOffset instead of max and min
 //    return "T:${"%.1f".format(Locale.ENGLISH, t)} - ${"%.1f".format(Locale.ENGLISH, to)}℃ W: ${
@@ -235,20 +234,13 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             first().routeId,
 //            first().lon,
             first().windSpeed.lerp(last().windSpeed, factor),
+            first().gustWindSpeed.lerp(last().gustWindSpeed, factor),
             dir,
             first().humidity.lerp(last().humidity,factor),
             time)
 }
 
-fun List<WeatherView>.foldAndAvg(context: Context): String = fold("") { acc, data -> acc + data.getPrettyToString(context) } + maxMinWW(
-        map { ww -> ww.weatherData.temp }.max(),
-        map { ww -> ww.weatherData.temp }.min(),
-        map { ww -> ww.weatherData.windSpeed }.average(),
-        map { ww -> ww.weatherData.windDirection }.average().roundToInt(),
-        map { ww -> ww.weatherData.rain }.max(),
-        map { ww -> ww.weatherData.rain }.min(),
-        map { ww -> ww.weatherData.humidity }.max(),
-        map { ww -> ww.weatherData.humidity }.min())
+
 
 
 fun Pair<WeatherData, Any?>.first() = first
