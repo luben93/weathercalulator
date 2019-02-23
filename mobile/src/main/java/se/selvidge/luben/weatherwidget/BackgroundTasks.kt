@@ -240,14 +240,14 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
 }
 
 fun Destination.getTimeTilNextLaunch(): Int {
-    try {
-        val nextDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 1
-        val nextLaunch = this.weekdays[this.weekdays.indexOf(nextDay) % (this.weekdays.size - 1)]
-        return ((nextDay + nextLaunch) % 7) * twentyfourHoursInMs
-    }catch (e:java.lang.Exception) {
-        Log.w(TAG,"no weekdays found",e)
-        return twentyfourHoursInMs
+    var nextDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 1
+    nextDay = if (nextDay >= 7 ) 0 else nextDay
+    var found =  this.weekdays.find {it == nextDay}
+    if(found == null) {
+        found = this.weekdays.find { it > nextDay }
     }
+    return found!! * twentyfourHoursInMs
+    //this.weekdays.find{ it > nextDay} : this.weekdays.Min();
 }
 
 
