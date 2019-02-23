@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteConstraintException
 import android.location.Location
 import android.location.LocationManager
+import android.provider.CalendarContract
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Log
@@ -25,6 +26,8 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+private val twentyfourHoursInMs = 86400000
+private val TAG = "backgroundTasks"
 
 class BackgroundTasks(val context: Context) {
 
@@ -32,9 +35,9 @@ class BackgroundTasks(val context: Context) {
     private var client = OkHttpClient()
     private var viewModel = listOf<WeatherView>()
     private val viewModelUpdated = Intent(MainActivity.VIEW_MODEL_UPDATED)
-    private val TAG = "backgroundTasks"
     private val halfHourInMs = 1800000
     private val hourInMs = halfHourInMs + halfHourInMs
+    private val halfDay = 12 * hourInMs
 
     fun updateFromNetwork(){
         db.weatherDao().getPastDate(Date().time - 864000).forEach { db.weatherDao().delete(it) }//todo not sure if new data is actually updated
@@ -148,17 +151,13 @@ class BackgroundTasks(val context: Context) {
             closest = db.destinationDao().getNext(Date().time)!!
         }
 
-        val midnight = Calendar.getInstance()
-        midnight.timeZone = TimeZone.getDefault()// comment out for local system current timezone
+        val midnight = Calendar.getInstance().getMidnight()
 
-        midnight.set(Calendar.HOUR_OF_DAY, 0)
-        midnight.set(Calendar.MINUTE, 0)
-        midnight.set(Calendar.SECOND, 0)
-        midnight.set(Calendar.MILLISECOND, 0)
 
-        val a = closest.comuteStartIntervalStart < 12 * hourInMs
-        val b = Date().time - midnight.timeInMillis < 12 * hourInMs
-        viewModel = getWeatherView(closest, a == b) //its not pretty but works for me
+
+        val upcommingStart = closest.comuteStartIntervalStart < halfDay
+        val timeOfDay = Date().time - midnight.timeInMillis < halfDay
+        viewModel = getWeatherView(closest, upcommingStart == timeOfDay) //its not pretty but works for me
 
         Log.d(TAG, "close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text,
@@ -171,7 +170,7 @@ class BackgroundTasks(val context: Context) {
         LocalBroadcastManager.getInstance(context).sendBroadcast(viewModelUpdated)
     }
 
-    fun getWeatherView(dest: Destination, launchOrNow: Boolean = false): List<WeatherView> {
+    fun getWeatherView(dest: Destination, launchNow: Boolean = false): List<WeatherView> {
         val EpochToZeroZero = Calendar.getInstance() // today
         EpochToZeroZero.timeZone = TimeZone.getDefault()// comment out for local system current timezone
         val timeSinceZeroZero: Long = (EpochToZeroZero.get(Calendar.HOUR_OF_DAY) * 60 * 60 + EpochToZeroZero.get(Calendar.MINUTE) * 60
@@ -183,12 +182,12 @@ class BackgroundTasks(val context: Context) {
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
 
 
-        val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
-        var t = launchTimeEpoch
-        if (!launchOrNow) {
-            t += if (dest.comuteStartIntervalStart < timeSinceZeroZero) 86400000 else 0
-        } else {
+        var t = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
+        if (launchNow) {
             t = if (dest.comuteStartIntervalStart < timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t //todo kl 19 man borde få morgondagens route så visas vad de skulle bli om man startar kl 19
+        } else {
+            t += if (dest.comuteStartIntervalStart < timeSinceZeroZero) dest.getTimeTilNextLaunch() else 0
+
         }
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
@@ -240,7 +239,16 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             time)
 }
 
-
+fun Destination.getTimeTilNextLaunch(): Int {
+    try {
+        val nextDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 1
+        val nextLaunch = this.weekdays[this.weekdays.indexOf(nextDay) % (this.weekdays.size - 1)]
+        return ((nextDay + nextLaunch) % 7) * twentyfourHoursInMs
+    }catch (e:java.lang.Exception) {
+        Log.w(TAG,"no weekdays found",e)
+        return twentyfourHoursInMs
+    }
+}
 
 
 fun Pair<WeatherData, Any?>.first() = first
@@ -292,4 +300,15 @@ fun Long.IsToday(): Boolean {
     cal.set(Calendar.MILLISECOND, 0)
     return this > cal.timeInMillis
 
+}
+
+
+fun Calendar.getMidnight():Calendar {
+    this.timeZone = TimeZone.getDefault()// comment out for local system current timezone
+
+    this.set(Calendar.HOUR_OF_DAY, 0)
+    this.set(Calendar.MINUTE, 0)
+    this.set(Calendar.SECOND, 0)
+    this.set(Calendar.MILLISECOND, 0)
+    return this
 }

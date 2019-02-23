@@ -39,7 +39,7 @@ class PopoverComuteSelector : AppCompatActivity() {
 
     lateinit var destPlaceLatLng: LatLng
     lateinit var originPlaceLatLng: LatLng
-    var weekdays:ArrayList<WeekdaysDataItem>? = null
+    var weekdays:List<WeekdaysDataItem>? = null
     val cal = Calendar.getInstance()
     val db = AppDatabase.getDatabase(this)
 
@@ -55,6 +55,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.comute_selector)
         val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
+        wds.setFirstDayOfWeek(2)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
@@ -113,8 +114,9 @@ class PopoverComuteSelector : AppCompatActivity() {
         wds.start(object : WeekdaysDataSource.Callback {
             override fun onWeekdaysSelected(p0: Int, p1: ArrayList<WeekdaysDataItem>?) {
 //                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-                weekdays = p1
+                weekdays = p1?.filter { it.isSelected }
 
+                Log.d(TAG,"weekdays selected $weekdays \n ${weekdays?.map { it.calendarDayId }} \n p1 $p1")
             }
 
             override fun onWeekdaysItemClicked(p0: Int, p1: WeekdaysDataItem?) {
@@ -168,7 +170,8 @@ class PopoverComuteSelector : AppCompatActivity() {
 
 
             Log.d(TAG, "gonna insert $destPlaceLatLng $originPlaceLatLng")
-        var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, (this.weekdays?.map { it.calendarDayId }
+        Log.d(TAG,"weekdays ${this.weekdays}")
+        var destination = Destination(destPlaceLatLng.latitude, destPlaceLatLng.longitude, originPlaceLatLng.latitude, originPlaceLatLng.longitude, (this.weekdays?.map { it.calendarDayId } //maybe need to -1 % 7 on calander day id
                 ?: listOf(1,2,3,4,5)).toIntArray(), timeStart, 0)
         val id = db.destinationDao().insert(destination)
             Log.d(TAG, "dest $destination  insert id $id")
