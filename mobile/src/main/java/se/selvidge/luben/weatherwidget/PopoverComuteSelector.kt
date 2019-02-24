@@ -55,7 +55,7 @@ class PopoverComuteSelector : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.comute_selector)
         val wds = WeekdaysDataSource(this, R.id.weekdays_stub)
-        wds.setFirstDayOfWeek(2)
+        wds.setFirstDayOfWeek(Calendar.MONDAY)
 
         val dest = fragmentManager.findFragmentById(R.id.destination_autocomplete) as PlaceAutocompleteFragment
         val origin = fragmentManager.findFragmentById(R.id.origin_autocomplete) as PlaceAutocompleteFragment
@@ -105,7 +105,7 @@ class PopoverComuteSelector : AppCompatActivity() {
             time_picker.startAt(hour, minute)
             timeStart = (hour * 60 * 60 + minute * 60) * 1000L
         }, hourMinute.first,hourMinute.second , true)
-
+        //todo this is broken, on update it shows time to 7.42 and sets time to current
         time_picker.startAt(hourMinute.first,hourMinute.second)
         time_picker.setOnClickListener {
             time.show()

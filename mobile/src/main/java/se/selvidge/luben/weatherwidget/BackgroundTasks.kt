@@ -26,7 +26,7 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
-private val twentyfourHoursInMs = 86400000
+private val twentyfourHoursInMs:Long = 86400000
 private val TAG = "backgroundTasks"
 
 class BackgroundTasks(val context: Context) {
@@ -35,7 +35,7 @@ class BackgroundTasks(val context: Context) {
     private var client = OkHttpClient()
     private var viewModel = listOf<WeatherView>()
     private val viewModelUpdated = Intent(MainActivity.VIEW_MODEL_UPDATED)
-    private val halfHourInMs = 1800000
+    private val halfHourInMs:Long = 1800000
     private val hourInMs = halfHourInMs + halfHourInMs
     private val halfDay = 12 * hourInMs
 
@@ -157,7 +157,7 @@ class BackgroundTasks(val context: Context) {
 
         val upcommingStart = closest.comuteStartIntervalStart < halfDay
         val timeOfDay = Date().time - midnight.timeInMillis < halfDay
-        viewModel = getWeatherView(closest, upcommingStart == timeOfDay) //its not pretty but works for me
+        viewModel = getWeatherView(closest, upcommingStart == timeOfDay && closest.weekdays.contains(Date().day)) //its not pretty but works for me
 
         Log.d(TAG, "close $closest \nnext NaNaNaNa batman")
         views.setTextViewText(R.id.appwidget_text,
@@ -184,10 +184,11 @@ class BackgroundTasks(val context: Context) {
 
         var t = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
         if (launchNow) {
+            Log.d(TAG,"will launch now")
             t = if (dest.comuteStartIntervalStart < timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t //todo kl 19 man borde få morgondagens route så visas vad de skulle bli om man startar kl 19
         } else {
-            t += if (dest.comuteStartIntervalStart < timeSinceZeroZero) dest.getTimeTilNextLaunch() else 0
-
+            Log.d(TAG,"will NOT launch now")
+            t +=  dest.getTimeTilNextLaunch()
         }
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
@@ -239,14 +240,16 @@ fun Pair<WeatherData, WeatherData>.toWeatherData(now: Long): WeatherData {
             time)
 }
 
-fun Destination.getTimeTilNextLaunch(): Int {
-    var nextDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 1
+fun Destination.getTimeTilNextLaunch(): Long {
+    Log.d(TAG,"doing gettilnextlaunch")
+    var nextDay = Date().day + 1
     nextDay = if (nextDay >= 7 ) 0 else nextDay
     var found =  this.weekdays.find {it == nextDay}
     if(found == null) {
         found = this.weekdays.find { it > nextDay }
     }
-    return found!! * twentyfourHoursInMs
+    Log.d(TAG,"$TAG days ${((found!! % 7) - nextDay)}")
+    return ((found!! % 7) - nextDay) * twentyfourHoursInMs
     //this.weekdays.find{ it > nextDay} : this.weekdays.Min();
 }
 
