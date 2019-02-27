@@ -36,6 +36,7 @@ class ExampleUnitTest {
     lateinit var mDb:AppDatabase
     lateinit var context: Context
     lateinit var EpochToZeroZero:Calendar
+    lateinit var week:IntArray
     var timeSinceZeroZero:Long =0
     @Before
     fun createDb() {
@@ -53,7 +54,8 @@ class ExampleUnitTest {
         EpochToZeroZero.set(Calendar.MINUTE, 0)
         EpochToZeroZero.set(Calendar.SECOND, 0)
         EpochToZeroZero.set(Calendar.MILLISECOND, 0)
-
+        EpochToZeroZero.set(Calendar.DAY_OF_WEEK,0)
+        week = listOf(0,1,2,3,4,5).toIntArray()
 
     }
 
@@ -64,9 +66,14 @@ class ExampleUnitTest {
     }
 
     @Test
+    fun testWeekdays(){
+
+    }
+
+    @Test
     fun testWeatherView(){
-        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244, 0, 1)
-        val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
+        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244, week, 0,1)
+        val launchTimeEpoch = (dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis)
         var back:WeatherView? = null
 
         Thread {
@@ -75,13 +82,13 @@ class ExampleUnitTest {
             var routeStep = RouteStep(59.3283, 17.9699, 2, dest.id!!)
             mDb.routeStepDao().insertAll(routeStep)
             routeStep = mDb.routeStepDao().getAllFromDestination(dest.id!!).first()
-            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1, launchTimeEpoch-1700000)
-            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+1700000)
+            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1.0,1, 1,launchTimeEpoch-1700000)
+            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 1.0,2,1, launchTimeEpoch+1700000)
             mDb.weatherDao().insertAll(weatherData,weatherData2)
             back= BackgroundTasks(context).getWeatherView(dest).first()
         }.apply { start() }.join()
 
-        assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1, launchTimeEpoch+2000),59.3283,17.9699)),back)
+        assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1.0,1,1, launchTimeEpoch+2000L),59.3283,17.9699)),back)
 
 
     }
@@ -100,7 +107,7 @@ class ExampleUnitTest {
 //        println(timediff)
 
 
-        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244,  timediff, timediff+timediff)
+        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244, week, timediff, timediff+timediff)
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis
         var back:WeatherView? = null
 //        println(launchTimeEpoch)
@@ -111,14 +118,14 @@ class ExampleUnitTest {
             var routeStep = RouteStep(59.3283, 17.9699, 2, dest.id!!)
             mDb.routeStepDao().insertAll(routeStep)
             routeStep = mDb.routeStepDao().getAllFromDestination(dest.id!!).first()
-            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1, launchTimeEpoch-(timediff/2))
-            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+(timediff/2))
+            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 0.1,1,1, launchTimeEpoch-(timediff/2))
+            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 0.1,2,2, launchTimeEpoch+(timediff/2))
             mDb.weatherDao().insertAll(weatherData,weatherData2)
 //            println(mDb.weatherDao().getAll())
             back= BackgroundTasks(context).getWeatherView(dest,false).first()
         }.apply { start() }.join()
 
-        val view =WeatherView(WeatherData(5.006669054188066, 0.0, 1,1.0013338108376133,  1, launchTimeEpoch+2000),59.3283,17.9699)
+        val view =WeatherView(WeatherData(5.006669054188066, 0.0, 1,1.0013338108376133,  0.1,1,1, launchTimeEpoch+2000),59.3283,17.9699)
         assertNotNull(back)
         assertEquals(view.weatherData.temp,back?.weatherData?.temp!!,0.01)
         assertEquals(view.weatherData.windSpeed,back?.weatherData?.windSpeed!!,0.01)
@@ -129,7 +136,7 @@ class ExampleUnitTest {
 
     @Test
     fun testWeatherViewWrap(){
-        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244, 0, 1)
+        var dest = Destination(59.3283, 17.9699, 59.1795, 18.1244, week,0, 1)
         val launchTimeEpoch = dest.comuteStartIntervalStart + EpochToZeroZero.timeInMillis + 86400000
 
         var back:WeatherView? = null
@@ -139,23 +146,23 @@ class ExampleUnitTest {
             var routeStep = RouteStep(59.3283, 17.9699, 2, dest.id!!)
             mDb.routeStepDao().insertAll(routeStep)
             routeStep = mDb.routeStepDao().getAllFromDestination(dest.id!!).first()
-            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 1, launchTimeEpoch-1700000)
-            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 2, launchTimeEpoch+1700000)
+            var weatherData = WeatherData(0.0, 0.0, routeStep.id!!, 0.0, 0.1,1,1, launchTimeEpoch-1700000)
+            var weatherData2 = WeatherData(10.0, 0.0, routeStep.id!!, 2.0, 0.2,2,2, launchTimeEpoch+1700000)
             mDb.weatherDao().insertAll(weatherData,weatherData2)
              back= BackgroundTasks(context).getWeatherView(dest,true).first()
         }.apply { start() }.join()
-        assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  1, launchTimeEpoch+2000),59.3283,17.9699)),back)
+        assertEquals((WeatherView(WeatherData(5.0058823529411764, 0.0, 1,1.0011764705882353,  0.1,1,1, launchTimeEpoch+2000),59.3283,17.9699)),back)
 
     }
 
     @Test
     fun testLerp(){
 
-        var weatherData = WeatherData(18.0, 0.0, 1, 0.0, 1, 20)
-        var weatherData2 = WeatherData(25.0, 0.0, 1, 2.0, 5, 50)
+        var weatherData = WeatherData(18.0, 0.0, 1, 0.0, 0.1,1,1, 20)
+        var weatherData2 = WeatherData(25.0, 0.0, 1, 2.0, 0.2,5,5, 50)
 
         val weather = Pair(weatherData, weatherData2).toWeatherData(35)
-        assertEquals(WeatherData(21.50, 0.0, 1,1.0,  3, 35),weather)
+        assertEquals(WeatherData(21.50, 0.0, 1,1.0,  0.15000000000000002,3,3, 35),weather)
 
     }
 }

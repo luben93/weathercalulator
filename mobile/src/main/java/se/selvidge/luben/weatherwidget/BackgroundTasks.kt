@@ -188,8 +188,10 @@ class BackgroundTasks(val context: Context) {
             t = if (dest.comuteStartIntervalStart < timeSinceZeroZero) timeSinceZeroZero + EpochToZeroZero.timeInMillis else t //todo kl 19 man borde få morgondagens route så visas vad de skulle bli om man startar kl 19
         } else {
             Log.d(TAG,"will NOT launch now")
-            t +=  dest.getTimeTilNextLaunch()
+            t +=  if (dest.comuteStartIntervalStart > timeSinceZeroZero) dest.getTimeTilNextLaunch() else twentyfourHoursInMs
         }
+        Log.d(TAG,"time in t is:"+t)
+
         var output = listOf<WeatherView>()
         db.routeStepDao().getAllFromDestination(dest.id!!).forEach {
             var time = t + (it.timeElapsed * 1000)
@@ -248,7 +250,7 @@ fun Destination.getTimeTilNextLaunch(): Long {
     if(found == null) {
         found = this.weekdays.find { it > nextDay }
     }
-    Log.d(TAG,"$TAG days ${((found!! % 7) - nextDay)}")
+ //   Log.d(TAG,"$TAG days ${((found!! % 7) - nextDay)}")
     return ((found!! % 7) - nextDay) * twentyfourHoursInMs
     //this.weekdays.find{ it > nextDay} : this.weekdays.Min();
 }
